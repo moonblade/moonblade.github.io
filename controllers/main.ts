@@ -1,3 +1,2 @@
-import * as data from '../helpers/Contants.json';
-console.log(data["player"]);
-console.log(data);
+import Constants from '../helpers/Constants';
+console.log(Constants.startLocation);

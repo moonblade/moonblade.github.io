@@ -10,7 +10,7 @@ class Character extends Unique {
         this.location = "startLocation";
     }
 
-    private moveTo(location){
+    public moveTo(location){
         console.log("Moving To " + location);
     }
 }
