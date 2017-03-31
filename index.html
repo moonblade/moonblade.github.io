@@ -10,13 +10,16 @@
     <script src="node_modules/jquery/dist/jquery.min.js"></script>
     <script src="js/script.js"></script>
     <div class="container-fluid">
-        <p><b>Controls :</b> inventory, look, north, south, east, west, take [object], put [object], open [object], kill [object],
+        <p><b>Controls :</b> inventory, look, go direction, take [object], put [object], open [object], kill [object],
             make [object], clear, help</p>
         <form onsubmit="doCommand(); return false;">
             <div class="form-group">
                 <input type="text" class="form-control" id="command" placeholder="Command">
             </div>
         </form>
+        <div id="gameText">
+            <p></p>
+        </div>
     </div>
 </body>
 
