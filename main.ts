@@ -1,7 +1,8 @@
 var constants = {
     defaultPlayerName: "player",
     startLocation: "startLocation",
-    endMarker: '.'
+    endMarker: '.',
+    invalidCommand: "Invalid Command"
 }
 
 var variables = {
@@ -22,13 +23,17 @@ class Game {
     }
 
     static execute(command: Command) {
+        Game.print(command.toString());
         switch (command.verb) {
             case 'help':
                 Command.generateHelp();
                 break;
+            default:
+                Game.print(constants.invalidCommand);
+                break;
         }
-        if (command.verb != '')
-            Game.print(constants.endMarker);
+        Game.print(constants.endMarker);
+
     }
 
     // Send the gameStep to the screen
@@ -123,13 +128,12 @@ class Command {
         // the rest of the words joined together.  If there are no other words, this will be an empty string
         this.object = parts.join(' ');
         // check if valid, if not valid, clear the command
-        if (!this.isValid()) {
-            console.log("Invalid Command")
-            this.verb = '';
-            this.object = '';
-        }
         // Clear the command
         ( < HTMLInputElement > document.getElementById('command')).value = "";
+    }
+
+    public toString(){
+        return this.verb + " " + this.object;
     }
 
     static generateHelp() {
@@ -143,12 +147,11 @@ class Command {
                     helpText += "/ " + alternative + extra;
             }
             Game.print(helpText + " : " + command.desc);
-
         }
     }
 
     // Check if a given command is valid
-    private isValid() {
+    public isValid() {
         // If no command entered invalid
         if (this.verb == '')
             return false;

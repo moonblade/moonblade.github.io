@@ -11,7 +11,8 @@ var __extends = (this && this.__extends) || (function () {
 var constants = {
     defaultPlayerName: "player",
     startLocation: "startLocation",
-    endMarker: '.'
+    endMarker: '.',
+    invalidCommand: "Invalid Command"
 };
 var variables = {
     gameStepText: [],
@@ -30,13 +31,16 @@ var Game = (function () {
         }
     };
     Game.execute = function (command) {
+        Game.print(command.toString());
         switch (command.verb) {
             case 'help':
                 Command.generateHelp();
                 break;
+            default:
+                Game.print(constants.invalidCommand);
+                break;
         }
-        if (command.verb != '')
-            Game.print(constants.endMarker);
+        Game.print(constants.endMarker);
     };
     // Send the gameStep to the screen
     Game.updateGameScreen = function () {
@@ -65,14 +69,12 @@ var Command = (function () {
         // the rest of the words joined together.  If there are no other words, this will be an empty string
         this.object = parts.join(' ');
         // check if valid, if not valid, clear the command
-        if (!this.isValid()) {
-            console.log("Invalid Command");
-            this.verb = '';
-            this.object = '';
-        }
         // Clear the command
         document.getElementById('command').value = "";
     }
+    Command.prototype.toString = function () {
+        return this.verb + " " + this.object;
+    };
     Command.generateHelp = function () {
         Game.print("The following commands are available");
         for (var key in Command.commands) {
