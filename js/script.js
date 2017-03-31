@@ -8,44 +8,57 @@ var __extends = (this && this.__extends) || (function () {
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
 })();
-var constants = {
-    defaultPlayerName: "player",
-    startLocation: "startLocation"
-};
-var Unique = (function () {
-    function Unique() {
+System.register("main", [], function (exports_1, context_1) {
+    "use strict";
+    var __moduleName = context_1 && context_1.id;
+    function doCommand() {
+        // var command = $('')
     }
-    return Unique;
-}());
-var Box = (function (_super) {
-    __extends(Box, _super);
-    function Box() {
-        return _super !== null && _super.apply(this, arguments) || this;
-    }
-    return Box;
-}(Unique));
-var Character = (function (_super) {
-    __extends(Character, _super);
-    function Character(name) {
-        var _this = _super.call(this) || this;
-        _this.name = name;
-        _this.inventory = [];
-        _this.location = constants.startLocation;
-        return _this;
-    }
-    Character.prototype.moveTo = function (location) {
-        console.log("Moving To " + location);
-        this.location = location;
+    var constant, Unique, Box, Character, Interactable, player;
+    return {
+        setters: [],
+        execute: function () {
+            constant = {
+                defaultPlayerName: "player",
+                startLocation: "startLocation"
+            };
+            Unique = (function () {
+                function Unique() {
+                }
+                return Unique;
+            }());
+            Box = (function (_super) {
+                __extends(Box, _super);
+                function Box() {
+                    return _super !== null && _super.apply(this, arguments) || this;
+                }
+                return Box;
+            }(Unique));
+            Character = (function (_super) {
+                __extends(Character, _super);
+                function Character(name) {
+                    var _this = _super.call(this) || this;
+                    _this.name = name;
+                    _this.inventory = [];
+                    _this.location = constant.startLocation;
+                    return _this;
+                }
+                Character.prototype.moveTo = function (location) {
+                    console.log("Moving To " + location);
+                    this.location = location;
+                };
+                return Character;
+            }(Unique));
+            Interactable = (function (_super) {
+                __extends(Interactable, _super);
+                function Interactable() {
+                    return _super !== null && _super.apply(this, arguments) || this;
+                }
+                return Interactable;
+            }(Unique));
+            player = new Character(constant.defaultPlayerName);
+            console.log(player);
+            console.log("here");
+        }
     };
-    return Character;
-}(Unique));
-var Interactable = (function (_super) {
-    __extends(Interactable, _super);
-    function Interactable() {
-        return _super !== null && _super.apply(this, arguments) || this;
-    }
-    return Interactable;
-}(Unique));
-var player = new Character(constants.defaultPlayerName);
-console.log(player);
-console.log("here");
+});

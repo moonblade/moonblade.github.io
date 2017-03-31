@@ -1,4 +1,5 @@
-var constants = {
+import $ from "jquery";
+var constant = {
     defaultPlayerName : "player",
     startLocation:"startLocation"
 }
@@ -24,7 +25,7 @@ class Character extends Unique {
         super();
         this.name = name;
         this.inventory = [];
-        this.location = constants.startLocation;
+        this.location = constant.startLocation;
     }
 
     public moveTo(location){
@@ -36,6 +37,11 @@ class Character extends Unique {
 class Interactable extends Unique{
 }
 
-let player = new Character(constants.defaultPlayerName);
+function doCommand()
+{
+    // var command = $('')
+}
+
+let player = new Character(constant.defaultPlayerName);
 console.log(player)
 console.log("here");

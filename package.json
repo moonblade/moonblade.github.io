@@ -4,9 +4,11 @@
   "description": "",
   "main": "index.js",
   "dependencies": {
-    "systemjs": "^0.20.9"
+    "bootstrap": "^3.3.7"
   },
-  "devDependencies": {},
+  "devDependencies": {
+    "@types/jquery": "^2.0.41"
+  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
