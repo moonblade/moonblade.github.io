@@ -22,12 +22,19 @@ class Game {
         }
     }
 
+    static reset() {
+        var boxList:Array<Box>;
+        var roomList:Array<Room>;
+    }
+
     static execute(command: Command) {
         Game.print(command.toString());
         switch (command.verb) {
             case 'help':
                 Command.generateHelp();
                 break;
+            // case 'go':
+                // break;
             default:
                 Game.print(constants.invalidCommand);
                 break;
@@ -185,11 +192,27 @@ class Unique {
     public name: String;
     public desc: String;
 }
-class Box extends Unique {
+
+interface Interactible {
+
+}
+
+interface Attackable extends Interactible{
+    attack();
+}
+
+interface Openable extends Interactible {
+    opensWith:String;
+    open();
+}
+
+class Box extends Unique  implements Openable{
     public material: String;
     public locked: boolean;
-    public unlocksWith: any;
+    public opensWith: String;
     public contents: Array < any > ;
+    public open(){
+    }
 }
 
 class Character extends Unique {
@@ -202,14 +225,29 @@ class Character extends Unique {
         this.location = constants.startLocation;
     }
 
+    public has(searchItem:String) {
+        for(let item of this.inventory)
+        {
+            has(item, searchItem)
+                return true;
+        }   
+        return false;
+    }
+
     public moveTo(location) {
         console.log("Moving To " + location);
         this.location = location;
     }
 }
 
-class Interactable extends Unique {}
-
+class Room extends Unique {
+    shortName: String;
+    description: String;
+    constructor(name:String) {
+        super();
+        this.name = name;
+    }
+}
 
 function doCommand() {
     var command = new Command();

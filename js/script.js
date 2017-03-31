@@ -30,12 +30,18 @@ var Game = (function () {
             variables.gameStepText = [];
         }
     };
+    Game.reset = function () {
+        var boxList;
+        var roomList;
+    };
     Game.execute = function (command) {
         Game.print(command.toString());
         switch (command.verb) {
             case 'help':
                 Command.generateHelp();
                 break;
+            // case 'go':
+            // break;
             default:
                 Game.print(constants.invalidCommand);
                 break;
@@ -191,6 +197,8 @@ var Box = (function (_super) {
     function Box() {
         return _super !== null && _super.apply(this, arguments) || this;
     }
+    Box.prototype.open = function () {
+    };
     return Box;
 }(Unique));
 var Character = (function (_super) {
@@ -202,18 +210,28 @@ var Character = (function (_super) {
         _this.location = constants.startLocation;
         return _this;
     }
+    Character.prototype.has = function (searchItem) {
+        for (var _i = 0, _a = this.inventory; _i < _a.length; _i++) {
+            var item = _a[_i];
+            has(item, searchItem);
+            return true;
+        }
+        return false;
+    };
     Character.prototype.moveTo = function (location) {
         console.log("Moving To " + location);
         this.location = location;
     };
     return Character;
 }(Unique));
-var Interactable = (function (_super) {
-    __extends(Interactable, _super);
-    function Interactable() {
-        return _super !== null && _super.apply(this, arguments) || this;
+var Room = (function (_super) {
+    __extends(Room, _super);
+    function Room(name) {
+        var _this = _super.call(this) || this;
+        _this.name = name;
+        return _this;
     }
-    return Interactable;
+    return Room;
 }(Unique));
 function doCommand() {
     var command = new Command();
