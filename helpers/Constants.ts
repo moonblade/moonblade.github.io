@@ -1,3 +1,6 @@
 export class Constants {
-    public static startLocation:String = "startLocation";
+    startLocation:String;
+    constructor(){
+        this.startLocation = "startLocation";
+    }
 }

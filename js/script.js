@@ -17,10 +17,11 @@ System.register("helpers/Constants", [], function (exports_1, context_1) {
             }());
             Constants.startLocation = "startLocation";
             exports_1("Constants", Constants);
+            window["Constants"] = Constants;
         }
     };
 });
-System.register("controllers/main", ["helpers/Constants"], function (exports_2, context_2) {
+System.register("main", ["helpers/Constants"], function (exports_2, context_2) {
     "use strict";
     var __moduleName = context_2 && context_2.id;
     var Constants_1;
@@ -31,7 +32,8 @@ System.register("controllers/main", ["helpers/Constants"], function (exports_2, 
             }
         ],
         execute: function () {
-            console.log(Constants_1.default.startLocation);
+            console.log("constants");
+            console.log(Constants_1.default);
         }
     };
 });
