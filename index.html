@@ -12,7 +12,7 @@
     <div class="container-fluid">
         <p><b>Controls :</b> inventory, look, north, south, east, west, take [object], put [object], open [object], kill [object],
             make [object], clear, help</p>
-        <form class="form-inline" onsubmit="doCommand()">
+        <form onsubmit="doCommand(); return false;">
             <div class="form-group">
                 <input type="text" class="form-control" id="command" placeholder="Command">
             </div>
