@@ -5,9 +5,10 @@ var constant = {
         'help': {
             desc: 'Print this help menu'
         },
-        'north': {
+        'go': {
             desc: 'Go to the specified direction',
-            alternatives: ['south', 'east', 'west', 'north', 'up', 'down']
+            alternatives: ['move', 'walk'],
+            extra:['[direction']
         },
         'inventory': {
             desc: 'Print inventory',
@@ -63,20 +64,15 @@ var constant = {
     }
 }
 
+function has(array, element){
+    return array.indexOf(element) > -1;
+}
+
 class Command {
 
     verb: String;
     object: String;
     constructor() {
-
-    }
-
-    public isValid()
-    {
-
-    }
-
-    public get() {
         var str = ( < HTMLInputElement > document.getElementById('command')).value;
         // splits string into an array of words, taking out all whitespace
         var parts = str.split(/\s+/);
@@ -84,12 +80,32 @@ class Command {
         this.verb = parts.shift();
         // the rest of the words joined together.  If there are no other words, this will be an empty string
         this.object = parts.join(' ');
+        // check if valid, if not valid, clear the command
         if(!this.isValid())
         {
+            console.log("Invalid Command")
             this.verb = '';
             this.object = '';
         }
+        // Clear the command
         (<HTMLInputElement>document.getElementById('command')).value = "";
+    }
+
+
+    private isValid()
+    {
+        if (this.verb=='')
+            return false;
+        for(var key in constant.commands)
+        {
+            // console.log(key, this.verb)
+            if (key==this.verb)
+                return true;
+            if (constant.commands[key].alternatives)
+                if (has(constant.commands[key].alternatives, this.verb))
+                    return true;
+        }
+        return false;
     }
 }
 
@@ -103,7 +119,6 @@ class Box extends Unique {
     public locked: boolean;
     public unlocksWith: any;
     public contents: Array < any > ;
-
 }
 
 class Character extends Unique {
@@ -126,10 +141,9 @@ class Interactable extends Unique {}
 
 
 function doCommand() {
-    command.get();
+    var command = new Command();
 
 }
 
-var command = new Command();
 let player = new Character(constant.defaultPlayerName);
 console.log(player)
