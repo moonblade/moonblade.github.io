@@ -9,10 +9,10 @@ var __extends = (this && this.__extends) || (function () {
     };
 })();
 var constants = {
-    defaultPlayerName: "player",
-    startLocation: "startLocation",
+    defaultPlayerName: 'player',
+    startLocation: 'westRoom',
     endMarker: '.',
-    invalidCommand: "Invalid Command"
+    invalidCommand: 'Invalid Command'
 };
 var variables = {
     gameStepText: [],
@@ -33,8 +33,8 @@ var Game = (function () {
         }
     };
     Game.reset = function () {
-        var boxList;
-        var roomList;
+        player.reset();
+        Room.reset();
     };
     Game.execute = function (command) {
         Game.print(command.toString());
@@ -42,13 +42,24 @@ var Game = (function () {
             case 'help':
                 Command.generateHelp();
                 break;
+            case 'look':
+                Room.roomList[player.location].describe();
+                break;
             // case 'go':
             // break;
+            case 'reset':
+                Game.reset();
+                Game.print('Game reset');
+                break;
             default:
                 Game.print(constants.invalidCommand);
                 break;
         }
         Game.print(constants.endMarker);
+        Game.updateInventory();
+    };
+    Game.updateInventory = function () {
+        document.getElementById("inventory").innerHTML = "Inventory : " + player.toStringInventory();
     };
     // Send the gameStep to the screen
     Game.updateGameScreen = function () {
@@ -63,7 +74,6 @@ var Game = (function () {
     };
     return Game;
 }());
-Game.commandList = [];
 function has(array, element) {
     return array.indexOf(element) > -1;
 }
@@ -77,6 +87,8 @@ var Command = (function () {
         // the rest of the words joined together.  If there are no other words, this will be an empty string
         this.object = parts.join(' ');
         // check if valid, if not valid, clear the command
+        // Check Validity
+        this.checkValidity();
         // Clear the command
         document.getElementById('command').value = "";
     }
@@ -101,7 +113,7 @@ var Command = (function () {
         }
     };
     // Check if a given command is valid
-    Command.prototype.isValid = function () {
+    Command.prototype.checkValidity = function () {
         // If no command entered invalid
         if (this.verb == '')
             return false;
@@ -124,6 +136,15 @@ var Command = (function () {
                     this.verb = key;
                     return true;
                 }
+            if (Command.commands[key].shortcut) {
+                for (var dkey in Command.commands[key].shortcut) {
+                    if (this.verb == dkey) {
+                        this.verb = Command.commands[key].shortcut[dkey][0];
+                        this.object = Command.commands[key].shortcut[dkey][1];
+                        return true;
+                    }
+                }
+            }
         }
         return false;
     };
@@ -143,17 +164,17 @@ Command.commands = {
         alternatives: ['move', 'walk'],
         extraDescription: '\tCan also use north, east, south, west, up, down, n, e, s, w as well',
         extra: ['[direction]'],
-        directions: {
-            'north': 'go north',
-            'n': 'go north',
-            'south': 'go south',
-            's': 'go south',
-            'east': 'go east',
-            'e': 'go east',
-            'west': 'go west',
-            'w': 'go west',
-            'up': 'go up',
-            'down': 'go down',
+        shortcut: {
+            'north': ['go', 'north'],
+            'n': ['go', 'north'],
+            'south': ['go', 'south'],
+            's': ['go', 'south'],
+            'east': ['go', 'east'],
+            'e': ['go', 'east'],
+            'west': ['go', 'west'],
+            'w': ['go', 'west'],
+            'up': ['go', 'up'],
+            'down': ['go', 'down'],
         }
     },
     'take': {
@@ -214,8 +235,7 @@ var Box = (function (_super) {
     function Box() {
         return _super !== null && _super.apply(this, arguments) || this;
     }
-    Box.prototype.open = function () {
-    };
+    Box.prototype.open = function () { };
     return Box;
 }(Unique));
 var Character = (function (_super) {
@@ -224,9 +244,18 @@ var Character = (function (_super) {
         var _this = _super.call(this) || this;
         _this.name = name;
         _this.inventory = [];
+        // this.inventory = ['random stuff', 'and other', 'sword', 'bring'];
         _this.location = constants.startLocation;
         return _this;
     }
+    Character.prototype.toStringInventory = function () {
+        var inventoryString = "";
+        for (var _i = 0, _a = this.inventory; _i < _a.length; _i++) {
+            var element = _a[_i];
+            inventoryString += element + ", ";
+        }
+        return inventoryString;
+    };
     Character.prototype.has = function (searchItem) {
         for (var _i = 0, _a = this.inventory; _i < _a.length; _i++) {
             var item = _a[_i];
@@ -234,6 +263,10 @@ var Character = (function (_super) {
             return true;
         }
         return false;
+    };
+    Character.prototype.reset = function () {
+        this.location = constants.startLocation;
+        this.inventory = [];
     };
     Character.prototype.moveTo = function (location) {
         console.log("Moving To " + location);
@@ -248,11 +281,38 @@ var Room = (function (_super) {
         _this.name = name;
         return _this;
     }
+    Room.reset = function () {
+        Room.roomList = {};
+        for (var key in Room.roomListObject) {
+            var room = new Room(key);
+            room.shortDescription = Room.roomListObject[key].shortDescription;
+            room.description = Room.roomListObject[key].description;
+            Room.roomList[key] = room;
+        }
+    };
+    Room.prototype.describe = function () {
+        Game.print(this.shortDescription);
+        Game.print(this.description);
+    };
     return Room;
 }(Unique));
+Room.roomListObject = {
+    'westRoom': {
+        shortDescription: 'west room',
+        description: 'You are in the west end of a sloping east-west passage of barren rock',
+        interactible: {
+            contents: ['platinumKey', 'water'],
+        },
+        exits: {
+            east: 'centerRoom'
+        }
+    }
+};
+Room.roomList = {};
 function doCommand() {
     var command = new Command();
     Game.execute(command);
 }
 var player = new Character(constants.defaultPlayerName);
+Game.reset();
 // console.log(player) 

@@ -1,8 +1,8 @@
 var constants = {
-    defaultPlayerName: "player",
-    startLocation: "startLocation",
+    defaultPlayerName: 'player',
+    startLocation: 'westRoom',
     endMarker: '.',
-    invalidCommand: "Invalid Command"
+    invalidCommand: 'Invalid Command'
 }
 
 var variables = {
@@ -11,21 +11,21 @@ var variables = {
 }
 
 class Game {
-    static commandList = [];
-    static print(string: String) {
+    
+    static print(string: string) {
         // Save till endMarker, when endMarker comes, print it on screen
         if (string == constants.endMarker) {
             variables.gameText = variables.gameStepText.concat(variables.gameText);
             Game.updateGameScreen();
             variables.gameStepText = [];
-        }else{
+        } else {
             variables.gameStepText.push(string);
         }
     }
 
     static reset() {
-        var boxList:Array<Box>;
-        var roomList:Array<Room>;
+        player.reset();
+        Room.reset();
     }
 
     static execute(command: Command) {
@@ -34,14 +34,25 @@ class Game {
             case 'help':
                 Command.generateHelp();
                 break;
+            case 'look':
+                Room.roomList[player.location].describe();
+                break;
             // case 'go':
                 // break;
+            case 'reset':
+                Game.reset();
+                Game.print('Game reset');
+                break;
             default:
                 Game.print(constants.invalidCommand);
                 break;
         }
         Game.print(constants.endMarker);
+        Game.updateInventory();
+    }
 
+    static updateInventory() {
+        (<HTMLParagraphElement>document.getElementById("inventory")).innerHTML = "Inventory : " + player.toStringInventory();
     }
 
     // Send the gameStep to the screen
@@ -76,19 +87,19 @@ class Command {
         'go': {
             desc: 'Go to the specified direction',
             alternatives: ['move', 'walk'],
-            extraDescription : '\tCan also use north, east, south, west, up, down, n, e, s, w as well',
+            extraDescription: '\tCan also use north, east, south, west, up, down, n, e, s, w as well',
             extra: ['[direction]'],
-            directions: {
-                'north': 'go north',
-                'n': 'go north',
-                'south': 'go south',
-                's': 'go south',
-                'east': 'go east',
-                'e': 'go east',
-                'west': 'go west',
-                'w': 'go west',
-                'up': 'go up',
-                'down': 'go down',
+            shortcut: {
+                'north': ['go', 'north'],
+                'n': ['go', 'north'],
+                'south': ['go', 'south'],
+                's': ['go', 'south'],
+                'east': ['go', 'east'],
+                'e': ['go', 'east'],
+                'west': ['go', 'west'],
+                'w': ['go', 'west'],
+                'up': ['go', 'up'],
+                'down': ['go', 'down'],
             }
         },
         'take': {
@@ -138,8 +149,8 @@ class Command {
             desc: 'Print this help menu'
         },
     }
-    verb: String;
-    object: String;
+    verb: string;
+    object: string;
     constructor() {
         var str = ( < HTMLInputElement > document.getElementById('command')).value;
         // splits string into an array of words, taking out all whitespace
@@ -149,11 +160,13 @@ class Command {
         // the rest of the words joined together.  If there are no other words, this will be an empty string
         this.object = parts.join(' ');
         // check if valid, if not valid, clear the command
+        // Check Validity
+        this.checkValidity();
         // Clear the command
         ( < HTMLInputElement > document.getElementById('command')).value = "";
     }
 
-    public toString(){
+    public toString() {
         return this.verb + " " + this.object;
     }
 
@@ -163,8 +176,8 @@ class Command {
             var command = Command.commands[key];
             var extra = (command.extra ? " " + command.extra : "");
             var helpText = key + extra;
-            if (command.alternatives){
-                for (let alternative of command.alternatives) 
+            if (command.alternatives) {
+                for (let alternative of command.alternatives)
                     helpText += "/ " + alternative + extra;
             }
             Game.print(helpText + " : " + command.desc);
@@ -174,7 +187,7 @@ class Command {
     }
 
     // Check if a given command is valid
-    public isValid() {
+    public checkValidity() {
         // If no command entered invalid
         if (this.verb == '')
             return false;
@@ -197,6 +210,15 @@ class Command {
                     this.verb = key;
                     return true;
                 }
+            if (Command.commands[key].shortcut) {
+                for (var dkey in Command.commands[key].shortcut) {
+                    if (this.verb == dkey) {
+                        this.verb = Command.commands[key].shortcut[dkey][0];
+                        this.object = Command.commands[key].shortcut[dkey][1];
+                        return true;
+                    }
+                }
+            }
         }
         return false;
     }
@@ -204,50 +226,63 @@ class Command {
 
 class Unique {
     static ids = [];
-    public id: String;
-    public name: String;
-    public desc: String;
+    public id: string;
+    public name: string;
+    public desc: string;
 }
 
 interface Interactible {
 
 }
 
-interface Attackable extends Interactible{
+interface Attackable extends Interactible {
     attack();
 }
 
 interface Openable extends Interactible {
-    opensWith:String;
+    opensWith: string;
     open();
 }
 
-class Box extends Unique  implements Openable{
-    public material: String;
+class Box extends Unique implements Openable {
+    public material: string;
     public locked: boolean;
-    public opensWith: String;
+    public opensWith: string;
     public contents: Array < any > ;
-    public open(){
-    }
+    public open() {}
 }
 
 class Character extends Unique {
     inventory: Array < any > ;
-    location: String;
-    constructor(name: String) {
+    location: string;
+    constructor(name: string) {
         super();
         this.name = name;
         this.inventory = [];
+        // this.inventory = ['random stuff', 'and other', 'sword', 'bring'];
         this.location = constants.startLocation;
     }
 
-    public has(searchItem:String) {
-        for(let item of this.inventory)
+    public toStringInventory(){
+        var inventoryString = "";
+        for (var element of this.inventory)
         {
+            inventoryString += element + ", ";
+        }
+        return inventoryString;
+    }
+
+    public has(searchItem: string) {
+        for (let item of this.inventory) {
             has(item, searchItem)
-                return true;
-        }   
+            return true;
+        }
         return false;
+    }
+
+    public reset() {
+        this.location = constants.startLocation;
+        this.inventory = [];
     }
 
     public moveTo(location) {
@@ -257,11 +292,42 @@ class Character extends Unique {
 }
 
 class Room extends Unique {
-    shortName: String;
-    description: String;
-    constructor(name:String) {
+    shortDescription: string;
+    description: string;
+    static roomListObject = {
+        'westRoom' : {
+            shortDescription: 'west room',
+            description: 'You are in the west end of a sloping east-west passage of barren rock',
+            interactible: {
+                contents: ['platinumKey', 'water'],
+            },
+            exits: {
+                east: 'centerRoom'
+            }
+        }
+    }
+    static roomList = {};
+    
+    static reset(){
+        Room.roomList = {};
+        for (var key in Room.roomListObject)
+        {
+            var room = new Room(key);
+            room.shortDescription = Room.roomListObject[key].shortDescription;
+            room.description = Room.roomListObject[key].description;
+            Room.roomList[key] = room;
+        }
+    }
+    constructor(name: string) {
         super();
         this.name = name;
+    }
+
+    public describe()
+    {
+        Game.print(this.shortDescription);
+        Game.print(this.description);
+        
     }
 }
 
@@ -271,4 +337,5 @@ function doCommand() {
 }
 
 let player = new Character(constants.defaultPlayerName);
+Game.reset();
 // console.log(player)
