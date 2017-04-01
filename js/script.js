@@ -47,6 +47,12 @@ var Game = (function () {
                 break;
             // case 'go':
             // break;
+            case 'ls':
+                var command = new Command('inventory');
+                Game.execute(command);
+                command = new Command('look');
+                Game.execute(command);
+                break;
             case 'reset':
                 Game.reset();
                 Game.print('Game reset');
@@ -78,7 +84,7 @@ function has(array, element) {
     return array.indexOf(element) > -1;
 }
 var Command = (function () {
-    function Command() {
+    function Command(verb) {
         var str = document.getElementById('command').value;
         // splits string into an array of words, taking out all whitespace
         var parts = str.split(/\s+/);
@@ -86,7 +92,9 @@ var Command = (function () {
         this.verb = parts.shift();
         // the rest of the words joined together.  If there are no other words, this will be an empty string
         this.object = parts.join(' ');
-        // check if valid, if not valid, clear the command
+        // if given as input, take that
+        if (verb)
+            this.verb = verb;
         // Check Validity
         this.checkValidity();
         // Clear the command
@@ -315,4 +323,9 @@ function doCommand() {
 }
 var player = new Character(constants.defaultPlayerName);
 Game.reset();
-// console.log(player) 
+// initial look command
+window.onload = function () {
+    console.log("here");
+    var command = new Command('look');
+    Game.execute(command);
+};

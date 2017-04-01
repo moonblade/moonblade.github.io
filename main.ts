@@ -11,7 +11,7 @@ var variables = {
 }
 
 class Game {
-    
+
     static print(string: string) {
         // Save till endMarker, when endMarker comes, print it on screen
         if (string == constants.endMarker) {
@@ -37,8 +37,14 @@ class Game {
             case 'look':
                 Room.roomList[player.location].describe();
                 break;
-            // case 'go':
+                // case 'go':
                 // break;
+            case 'ls':
+                var command = new Command('inventory');
+                Game.execute(command);
+                command = new Command('look');
+                Game.execute(command);
+                break;
             case 'reset':
                 Game.reset();
                 Game.print('Game reset');
@@ -52,7 +58,7 @@ class Game {
     }
 
     static updateInventory() {
-        (<HTMLParagraphElement>document.getElementById("inventory")).innerHTML = "Inventory : " + player.toStringInventory();
+        ( < HTMLParagraphElement > document.getElementById("inventory")).innerHTML = "Inventory : " + player.toStringInventory();
     }
 
     // Send the gameStep to the screen
@@ -151,7 +157,7 @@ class Command {
     }
     verb: string;
     object: string;
-    constructor() {
+    constructor(verb?:string) {
         var str = ( < HTMLInputElement > document.getElementById('command')).value;
         // splits string into an array of words, taking out all whitespace
         var parts = str.split(/\s+/);
@@ -159,12 +165,15 @@ class Command {
         this.verb = parts.shift();
         // the rest of the words joined together.  If there are no other words, this will be an empty string
         this.object = parts.join(' ');
-        // check if valid, if not valid, clear the command
+        // if given as input, take that
+        if(verb)
+            this.verb = verb;
         // Check Validity
         this.checkValidity();
         // Clear the command
         ( < HTMLInputElement > document.getElementById('command')).value = "";
     }
+
 
     public toString() {
         return this.verb + " " + this.object;
@@ -263,10 +272,9 @@ class Character extends Unique {
         this.location = constants.startLocation;
     }
 
-    public toStringInventory(){
+    public toStringInventory() {
         var inventoryString = "";
-        for (var element of this.inventory)
-        {
+        for (var element of this.inventory) {
             inventoryString += element + ", ";
         }
         return inventoryString;
@@ -295,7 +303,7 @@ class Room extends Unique {
     shortDescription: string;
     description: string;
     static roomListObject = {
-        'westRoom' : {
+        'westRoom': {
             shortDescription: 'west room',
             description: 'You are in the west end of a sloping east-west passage of barren rock',
             interactible: {
@@ -307,11 +315,10 @@ class Room extends Unique {
         }
     }
     static roomList = {};
-    
-    static reset(){
+
+    static reset() {
         Room.roomList = {};
-        for (var key in Room.roomListObject)
-        {
+        for (var key in Room.roomListObject) {
             var room = new Room(key);
             room.shortDescription = Room.roomListObject[key].shortDescription;
             room.description = Room.roomListObject[key].description;
@@ -323,11 +330,10 @@ class Room extends Unique {
         this.name = name;
     }
 
-    public describe()
-    {
+    public describe() {
         Game.print(this.shortDescription);
         Game.print(this.description);
-        
+
     }
 }
 
@@ -338,4 +344,10 @@ function doCommand() {
 
 let player = new Character(constants.defaultPlayerName);
 Game.reset();
-// console.log(player)
+
+// initial look command
+window.onload = ()=>{
+    console.log("here");
+    var command = new Command('look');
+    Game.execute(command);
+}
