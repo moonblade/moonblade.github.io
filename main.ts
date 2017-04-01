@@ -14,11 +14,12 @@ class Game {
     static commandList = [];
     static print(string: String) {
         // Save till endMarker, when endMarker comes, print it on screen
-        variables.gameStepText.push(string);
         if (string == constants.endMarker) {
             variables.gameText = variables.gameStepText.concat(variables.gameText);
             Game.updateGameScreen();
             variables.gameStepText = [];
+        }else{
+            variables.gameStepText.push(string);
         }
     }
 
@@ -47,9 +48,9 @@ class Game {
     static updateGameScreen() {
         var gameTextDiv = ( < HTMLElement > document.getElementById('gameText'))
         var divElement = document.createElement("div");
+        var pElement = document.createElement("pre");
         for (var key in variables.gameStepText) {
-            var pElement = document.createElement("p");
-            pElement.textContent = variables.gameStepText[key];
+            pElement.textContent += variables.gameStepText[key] + "\n";
             divElement.appendChild(pElement);
         }
         gameTextDiv.insertBefore(divElement, gameTextDiv.firstChild);
@@ -75,7 +76,20 @@ class Command {
         'go': {
             desc: 'Go to the specified direction',
             alternatives: ['move', 'walk'],
-            extra: ['[direction]']
+            extraDescription : '\tCan also use north, east, south, west, up, down, n, e, s, w as well',
+            extra: ['[direction]'],
+            directions: {
+                'north': 'go north',
+                'n': 'go north',
+                'south': 'go south',
+                's': 'go south',
+                'east': 'go east',
+                'e': 'go east',
+                'west': 'go west',
+                'w': 'go west',
+                'up': 'go up',
+                'down': 'go down',
+            }
         },
         'take': {
             desc: 'Take an object',
@@ -154,6 +168,8 @@ class Command {
                     helpText += "/ " + alternative + extra;
             }
             Game.print(helpText + " : " + command.desc);
+            if (command.extraDescription)
+                Game.print(command.extraDescription);
         }
     }
 

@@ -23,11 +23,13 @@ var Game = (function () {
     }
     Game.print = function (string) {
         // Save till endMarker, when endMarker comes, print it on screen
-        variables.gameStepText.push(string);
         if (string == constants.endMarker) {
             variables.gameText = variables.gameStepText.concat(variables.gameText);
             Game.updateGameScreen();
             variables.gameStepText = [];
+        }
+        else {
+            variables.gameStepText.push(string);
         }
     };
     Game.reset = function () {
@@ -52,9 +54,9 @@ var Game = (function () {
     Game.updateGameScreen = function () {
         var gameTextDiv = document.getElementById('gameText');
         var divElement = document.createElement("div");
+        var pElement = document.createElement("pre");
         for (var key in variables.gameStepText) {
-            var pElement = document.createElement("p");
-            pElement.textContent = variables.gameStepText[key];
+            pElement.textContent += variables.gameStepText[key] + "\n";
             divElement.appendChild(pElement);
         }
         gameTextDiv.insertBefore(divElement, gameTextDiv.firstChild);
@@ -94,6 +96,8 @@ var Command = (function () {
                 }
             }
             Game.print(helpText + " : " + command.desc);
+            if (command.extraDescription)
+                Game.print(command.extraDescription);
         }
     };
     // Check if a given command is valid
@@ -137,7 +141,20 @@ Command.commands = {
     'go': {
         desc: 'Go to the specified direction',
         alternatives: ['move', 'walk'],
-        extra: ['[direction]']
+        extraDescription: '\tCan also use north, east, south, west, up, down, n, e, s, w as well',
+        extra: ['[direction]'],
+        directions: {
+            'north': 'go north',
+            'n': 'go north',
+            'south': 'go south',
+            's': 'go south',
+            'east': 'go east',
+            'e': 'go east',
+            'west': 'go west',
+            'w': 'go west',
+            'up': 'go up',
+            'down': 'go down',
+        }
     },
     'take': {
         desc: 'Take an object',
