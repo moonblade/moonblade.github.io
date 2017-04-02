@@ -15,12 +15,17 @@ var constants = {
     invalidCommand: 'Invalid Command',
     emptyInventory: 'Your inventory is empty',
     noExit: 'There is no exit in that direction',
-    testCode: true,
+    debug: true,
 };
 var variables = {
     gameStepText: [],
     gameText: [],
 };
+function debug(string) {
+    if (constants.debug) {
+        console.log(string);
+    }
+}
 var Game = (function () {
     function Game() {
     }
@@ -35,14 +40,39 @@ var Game = (function () {
             variables.gameStepText.push(string);
         }
     };
+    Game.save = function (command) {
+        // TODO remove this hack, use jQuery and do it properly
+        Game.savedGame[command.object] = JSON.parse(JSON.stringify(Game.commandHistory));
+        Game.print("Game saved");
+    };
+    Game.load = function (command) {
+        if (command.object in Game.savedGame) {
+            Game.print("Game loaded");
+        }
+        else {
+            if (Object.keys(Game.savedGame).length > 0) {
+                Game.print("No such save game exists");
+                Game.print("Saved Games are:");
+                for (var key in Game.savedGame) {
+                    Game.print(key);
+                }
+            }
+            else {
+                Game.print("No save games present");
+            }
+        }
+    };
     Game.reset = function () {
         player.reset();
         Room.reset();
+        Game.commandHistory = [];
     };
     Game.execute = function (command) {
         Game.print(command.toString());
         Game.commandHistory.push(command);
         if (!command.checkValidity()) {
+            if (command.defaultExtra) {
+            }
             if (command.missedExtra)
                 Game.print(command.missedExtra);
             else
@@ -57,7 +87,8 @@ var Game = (function () {
                     Room.roomList[player.location].describe();
                     break;
                 case 'go':
-                    player.moveTo(command.object);
+                    if (player.moveTo(command.object))
+                        Room.roomList[player.location].describe();
                     break;
                 case 'ls':
                     player.printInventory();
@@ -70,6 +101,12 @@ var Game = (function () {
                 case 'reset':
                     Game.reset();
                     Game.print('Game reset');
+                    break;
+                case 'save':
+                    Game.save(command);
+                    break;
+                case 'load':
+                    Game.load(command);
                     break;
                 default:
                     Game.print(constants.invalidCommand);
@@ -85,17 +122,24 @@ var Game = (function () {
     // Send the gameStep to the screen
     Game.updateGameScreen = function () {
         var gameTextDiv = document.getElementById('gameText');
-        var divElement = document.createElement("div");
+        // var divElement = document.createElement("div");
         var pElement = document.createElement("pre");
+        // Browser compatible pre element word wrap
+        pElement.style.display = "table";
+        pElement.style.whiteSpace = "pre-wrap";
+        pElement.style.whiteSpace = "-pre-wrap";
+        pElement.style.whiteSpace = "-o-pre-wrap";
+        pElement.style.whiteSpace = "-moz-pre-wrap";
+        pElement.style.wordWrap = "break-word";
         for (var key in variables.gameStepText) {
             pElement.textContent += variables.gameStepText[key] + "\n";
-            divElement.appendChild(pElement);
+            // divElement.appendChild(pElement);
         }
-        gameTextDiv.insertBefore(divElement, gameTextDiv.firstChild);
+        gameTextDiv.insertBefore(pElement, gameTextDiv.firstChild);
     };
     return Game;
 }());
-Game.savedCommands = {};
+Game.savedGame = {};
 Game.commandHistory = [];
 function has(array, element) {
     return array.indexOf(element) > -1;
@@ -149,6 +193,11 @@ var Command = (function () {
                 if (Command.commands[key].extra)
                     if (this.object == '') {
                         this.missedExtra = Command.commands[key].missedExtra;
+                        this.defaultExtra = Command.commands[key].defaultExtra;
+                        if (this.defaultExtra) {
+                            this.object = this.defaultExtra;
+                            return true;
+                        }
                         return false;
                     }
                 return true;
@@ -160,11 +209,17 @@ var Command = (function () {
                     if (Command.commands[key].extra)
                         if (this.object == '') {
                             this.missedExtra = Command.commands[key].missedExtra;
+                            this.defaultExtra = Command.commands[key].defaultExtra;
+                            if (this.defaultExtra) {
+                                this.object = this.defaultExtra;
+                                return true;
+                            }
                             return false;
                         }
                     this.verb = key;
                     return true;
                 }
+            // If shortcut, replace with actual command
             if (Command.commands[key].shortcut) {
                 for (var dkey in Command.commands[key].shortcut) {
                     if (this.verb == dkey) {
@@ -243,11 +298,13 @@ Command.commands = {
     'save': {
         desc: 'Create a checkpoint that can be loaded later',
         extra: '[tag]',
+        defaultExtra: 'saveGame',
         missedExtra: 'Please specify tag to save under',
     },
     'load': {
         desc: 'Load a checkpoint that has been saved',
         extra: '[tag]',
+        defaultExtra: 'saveGame',
         missedExtra: 'Please specify tag to load from',
     },
     'reset': {
@@ -267,14 +324,17 @@ var Unique = (function () {
     return Unique;
 }());
 Unique.ids = [];
-var Box = (function (_super) {
-    __extends(Box, _super);
-    function Box() {
-        return _super !== null && _super.apply(this, arguments) || this;
+var interactible = (function () {
+    function interactible() {
     }
-    Box.prototype.open = function () { };
-    return Box;
-}(Unique));
+    return interactible;
+}());
+interactible.interactibleListObject = {
+    platinumKey: {
+        shortDescription: 'platinum key'
+    }
+};
+interactible.interactibleList = {};
 var Character = (function (_super) {
     __extends(Character, _super);
     function Character(name) {
@@ -319,25 +379,27 @@ var Character = (function (_super) {
     Character.prototype.reset = function () {
         this.location = constants.startLocation;
         this.inventory = [];
-        if (constants.testCode) {
+        if (constants.debug) {
             this.inventory = ['some', 'stuff', 'other', 'good'];
         }
     };
     Character.prototype.moveTo = function (direction) {
         var currentRoom = Room.findOne(this.location);
         if (currentRoom != null) {
-            console.log(currentRoom);
             var exit = currentRoom.findExit(direction);
             if (exit) {
                 player.location = exit.to;
+                return true;
             }
             else {
                 Game.print(constants.noExit);
+                return false;
             }
             // this.location = location;
         }
         else {
             Game.print('Current location errored, please restart the game');
+            return false;
         }
     };
     return Character;

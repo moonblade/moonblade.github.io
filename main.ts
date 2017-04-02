@@ -5,16 +5,24 @@ var constants = {
     invalidCommand: 'Invalid Command',
     emptyInventory: 'Your inventory is empty',
     noExit: 'There is no exit in that direction',
-    testCode: true,
+    debug: true,
+    
 }
 
 var variables = {
     gameStepText: [],
     gameText: [],
+
 }
 
+function debug(string:string) {
+    if(constants.debug)
+    {
+        console.log(string);
+    }
+}
 class Game {
-    static savedCommands = {};
+    static savedGame = {};
     static commandHistory:Array<Command> = [];
     static print(string: string) {
         // Save till endMarker, when endMarker comes, print it on screen
@@ -27,9 +35,37 @@ class Game {
         }
     }
 
+    static save(command: Command) {
+        // TODO remove this hack, use jQuery and do it properly
+        Game.savedGame[command.object] = JSON.parse(JSON.stringify(Game.commandHistory));
+        Game.print("Game saved")
+    }
+
+    static load(command: Command) {
+        if (command.object in Game.savedGame)
+        {
+
+            Game.print("Game loaded");
+        }else{
+            if(Object.keys(Game.savedGame).length > 0)
+            {
+                Game.print("No such save game exists");
+                Game.print("Saved Games are:");
+                for(var key in Game.savedGame)
+                {
+                    Game.print(key);
+                }
+            }else{
+                Game.print("No save games present");
+            }
+            
+        }
+    }
+
     static reset() {
         player.reset();
         Room.reset();
+        Game.commandHistory = [];
     }
 
     static execute(command: Command) {
@@ -37,6 +73,10 @@ class Game {
         Game.commandHistory.push(command);
         if(!command.checkValidity())
         {
+            if(command.defaultExtra)
+            {
+
+            }
             if(command.missedExtra)
                 Game.print(command.missedExtra);
             else
@@ -52,7 +92,8 @@ class Game {
                     Room.roomList[player.location].describe();
                     break;
                 case 'go':
-                    player.moveTo(command.object);
+                    if(player.moveTo(command.object))
+                        Room.roomList[player.location].describe();
                     break;
                 case 'ls':
                     player.printInventory();
@@ -65,6 +106,12 @@ class Game {
                 case 'reset':
                     Game.reset();
                     Game.print('Game reset');
+                    break;
+                case 'save':
+                    Game.save(command);
+                    break;
+                case 'load':
+                    Game.load(command);
                     break;
                 default:
                     Game.print(constants.invalidCommand);
@@ -82,13 +129,20 @@ class Game {
     // Send the gameStep to the screen
     static updateGameScreen() {
         var gameTextDiv = ( < HTMLElement > document.getElementById('gameText'))
-        var divElement = document.createElement("div");
+        // var divElement = document.createElement("div");
         var pElement = document.createElement("pre");
+        // Browser compatible pre element word wrap
+        pElement.style.display = "table";
+        pElement.style.whiteSpace = "pre-wrap";
+        pElement.style.whiteSpace = "-pre-wrap";
+        pElement.style.whiteSpace = "-o-pre-wrap";
+        pElement.style.whiteSpace = "-moz-pre-wrap";
+        pElement.style.wordWrap = "break-word";
         for (var key in variables.gameStepText) {
             pElement.textContent += variables.gameStepText[key] + "\n";
-            divElement.appendChild(pElement);
+            // divElement.appendChild(pElement);
         }
-        gameTextDiv.insertBefore(divElement, gameTextDiv.firstChild);
+        gameTextDiv.insertBefore(pElement, gameTextDiv.firstChild);
 
     }
 }
@@ -98,7 +152,6 @@ function has(array, element) {
 }
 
 class Command {
-
     static commands = {
         'inventory': {
             desc: 'Print inventory',
@@ -163,11 +216,13 @@ class Command {
         'save': {
             desc: 'Create a checkpoint that can be loaded later',
             extra: '[tag]',
+            defaultExtra: 'saveGame',
             missedExtra: 'Please specify tag to save under',
         },
         'load': {
             desc: 'Load a checkpoint that has been saved',
             extra: '[tag]',
+            defaultExtra: 'saveGame',
             missedExtra: 'Please specify tag to load from',
         },
         'reset': {
@@ -184,6 +239,7 @@ class Command {
     verb: string;
     object: string;
     missedExtra: string;
+    defaultExtra: string;
     constructor(verb?:string) {
         var str = ( < HTMLInputElement > document.getElementById('command')).value;
         // splits string into an array of words, taking out all whitespace
@@ -234,6 +290,12 @@ class Command {
                 if (Command.commands[key].extra)
                     if (this.object == ''){
                         this.missedExtra = Command.commands[key].missedExtra;
+                        this.defaultExtra = Command.commands[key].defaultExtra;
+                        if(this.defaultExtra)
+                        {
+                            this.object = this.defaultExtra;
+                            return true;
+                        }
                         return false;
                     }
                 return true;
@@ -245,11 +307,18 @@ class Command {
                     if (Command.commands[key].extra)
                         if (this.object == ''){
                             this.missedExtra = Command.commands[key].missedExtra;
+                            this.defaultExtra = Command.commands[key].defaultExtra;
+                            if(this.defaultExtra)
+                            {
+                                this.object = this.defaultExtra;
+                                return true;
+                            }
                             return false;
                         }
                     this.verb = key;
                     return true;
                 }
+            // If shortcut, replace with actual command
             if (Command.commands[key].shortcut) {
                 for (var dkey in Command.commands[key].shortcut) {
                     if (this.verb == dkey) {
@@ -271,25 +340,13 @@ class Unique {
     public desc: string;
 }
 
-interface Interactible {
-
-}
-
-interface Attackable extends Interactible {
-    attack();
-}
-
-interface Openable extends Interactible {
-    opensWith: string;
-    open();
-}
-
-class Box extends Unique implements Openable {
-    public material: string;
-    public locked: boolean;
-    public opensWith: string;
-    public contents: Array < any > ;
-    public open() {}
+class interactible {
+    static interactibleListObject = {
+        platinumKey: {
+            shortDescription: 'platinum key'
+        }
+    };
+    static interactibleList = {};
 }
 
 class Character extends Unique {
@@ -338,7 +395,7 @@ class Character extends Unique {
     public reset() {
         this.location = constants.startLocation;
         this.inventory = [];        
-        if(constants.testCode)
+        if(constants.debug)
         {
             this.inventory = ['some', 'stuff', 'other', 'good']
         }
@@ -347,18 +404,19 @@ class Character extends Unique {
     public moveTo(direction: string) {
         var currentRoom:Room = Room.findOne(this.location);
         if(currentRoom!=null){
-            console.log(currentRoom);
             var exit = currentRoom.findExit(direction);
             if(exit)
             {
                 player.location = exit.to;
-
+                return true;
             }else{
                 Game.print(constants.noExit);
+                return false;
             }
         // this.location = location;
         }else{
             Game.print('Current location errored, please restart the game');
+            return false;
         }
     }
 }
