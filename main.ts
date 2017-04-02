@@ -2,7 +2,10 @@ var constants = {
     defaultPlayerName: 'player',
     startLocation: 'westRoom',
     endMarker: '.',
-    invalidCommand: 'Invalid Command'
+    invalidCommand: 'Invalid Command',
+    emptyInventory: 'Your inventory is empty',
+    noExit: 'There is no exit in that direction',
+    testCode: true,
 }
 
 var variables = {
@@ -11,7 +14,8 @@ var variables = {
 }
 
 class Game {
-
+    static savedCommands = {};
+    static commandHistory:Array<Command> = [];
     static print(string: string) {
         // Save till endMarker, when endMarker comes, print it on screen
         if (string == constants.endMarker) {
@@ -30,28 +34,42 @@ class Game {
 
     static execute(command: Command) {
         Game.print(command.toString());
-        switch (command.verb) {
-            case 'help':
-                Command.generateHelp();
-                break;
-            case 'look':
-                Room.roomList[player.location].describe();
-                break;
-                // case 'go':
-                // break;
-            case 'ls':
-                var command = new Command('inventory');
-                Game.execute(command);
-                command = new Command('look');
-                Game.execute(command);
-                break;
-            case 'reset':
-                Game.reset();
-                Game.print('Game reset');
-                break;
-            default:
+        Game.commandHistory.push(command);
+        if(!command.checkValidity())
+        {
+            if(command.missedExtra)
+                Game.print(command.missedExtra);
+            else
                 Game.print(constants.invalidCommand);
-                break;
+        }
+        else
+        {
+            switch (command.verb) {
+                case 'help':
+                    Command.generateHelp();
+                    break;
+                case 'look':
+                    Room.roomList[player.location].describe();
+                    break;
+                case 'go':
+                    player.moveTo(command.object);
+                    break;
+                case 'ls':
+                    player.printInventory();
+                    Game.print('..');
+                    Room.roomList[player.location].describe();
+                    break;
+                case 'inventory':
+                    player.printInventory();
+                    break;
+                case 'reset':
+                    Game.reset();
+                    Game.print('Game reset');
+                    break;
+                default:
+                    Game.print(constants.invalidCommand);
+                    break;
+            }
         }
         Game.print(constants.endMarker);
         Game.updateInventory();
@@ -93,7 +111,7 @@ class Command {
         'go': {
             desc: 'Go to the specified direction',
             alternatives: ['move', 'walk'],
-            extraDescription: '\tCan also use north, east, south, west, up, down, n, e, s, w as well',
+            extraDescription: '\tYou can also use north, east, south, west, up, down, n, e, s, w as well',
             extra: ['[direction]'],
             shortcut: {
                 'north': ['go', 'north'],
@@ -106,43 +124,51 @@ class Command {
                 'w': ['go', 'west'],
                 'up': ['go', 'up'],
                 'down': ['go', 'down'],
-            }
+            },
+            missedExtra: 'Please specify direction to go',
         },
         'take': {
             desc: 'Take an object',
             alternatives: ['pick', 'fill'],
-            extra: '[object]'
+            extra: '[object]',
+            missedExtra: 'Please specify what to take',
         },
         'put': {
             desc: 'Put an object',
             alternatives: ['place', 'keep', 'fix', 'pour'],
-            extra: '[object]'
+            extra: '[object]',
+            missedExtra: 'Please specify what to put',
         },
         'open': {
             desc: 'Try to open the object',
             alternatives: ['unlock'],
-            extra: '[object]'
+            extra: '[object]',
+            missedExtra: 'Please specify what to open',
         },
         'attack': {
             desc: 'Try to kill the enemy',
             alternatives: ['kill'],
-            extra: '[enemy]'
+            extra: '[enemy]',
+            missedExtra: 'Please specify what to attack',
         },
         'make': {
             desc: 'Make object if the materials are present',
             alternatives: ['craft', 'build'],
-            extra: '[object]'
+            extra: '[object]',
+            missedExtra: 'Please specify what to make',
         },
         'ls': {
             desc: 'Combination of inventory and look'
         },
         'save': {
             desc: 'Create a checkpoint that can be loaded later',
-            extra: '[tag]'
+            extra: '[tag]',
+            missedExtra: 'Please specify tag to save under',
         },
         'load': {
             desc: 'Load a checkpoint that has been saved',
-            extra: '[tag]'
+            extra: '[tag]',
+            missedExtra: 'Please specify tag to load from',
         },
         'reset': {
             desc: 'Start game from beginning again',
@@ -157,6 +183,7 @@ class Command {
     }
     verb: string;
     object: string;
+    missedExtra: string;
     constructor(verb?:string) {
         var str = ( < HTMLInputElement > document.getElementById('command')).value;
         // splits string into an array of words, taking out all whitespace
@@ -205,8 +232,10 @@ class Command {
             if (key == this.verb) {
                 // If required extra field is not given, then its not valid
                 if (Command.commands[key].extra)
-                    if (this.object == '')
+                    if (this.object == ''){
+                        this.missedExtra = Command.commands[key].missedExtra;
                         return false;
+                    }
                 return true;
             }
             // If command is one of the alternatives, its valid
@@ -214,8 +243,10 @@ class Command {
                 if (has(Command.commands[key].alternatives, this.verb)) {
                     // If required extra field is not given, then its not valid
                     if (Command.commands[key].extra)
-                        if (this.object == '')
+                        if (this.object == ''){
+                            this.missedExtra = Command.commands[key].missedExtra;
                             return false;
+                        }
                     this.verb = key;
                     return true;
                 }
@@ -268,7 +299,6 @@ class Character extends Unique {
         super();
         this.name = name;
         this.inventory = [];
-        // this.inventory = ['random stuff', 'and other', 'sword', 'bring'];
         this.location = constants.startLocation;
     }
 
@@ -280,6 +310,23 @@ class Character extends Unique {
         return inventoryString;
     }
 
+    public inventoryEmpty(){
+        return this.inventory.length<1;
+    }
+
+    public printInventory() {
+        if(!this.inventoryEmpty())
+        {
+            Game.print("You are carrying: ");
+            for(var item of this.inventory){
+                // TODO Change to description of item
+                Game.print(item);
+            }
+        } else {
+            Game.print(constants.emptyInventory);
+        }
+
+    }
     public has(searchItem: string) {
         for (let item of this.inventory) {
             has(item, searchItem)
@@ -290,31 +337,85 @@ class Character extends Unique {
 
     public reset() {
         this.location = constants.startLocation;
-        this.inventory = [];
+        this.inventory = [];        
+        if(constants.testCode)
+        {
+            this.inventory = ['some', 'stuff', 'other', 'good']
+        }
     }
 
-    public moveTo(location) {
-        console.log("Moving To " + location);
-        this.location = location;
+    public moveTo(direction: string) {
+        var currentRoom:Room = Room.findOne(this.location);
+        if(currentRoom!=null){
+            console.log(currentRoom);
+            var exit = currentRoom.findExit(direction);
+            if(exit)
+            {
+                player.location = exit.to;
+
+            }else{
+                Game.print(constants.noExit);
+            }
+        // this.location = location;
+        }else{
+            Game.print('Current location errored, please restart the game');
+        }
     }
 }
 
 class Room extends Unique {
     shortDescription: string;
     description: string;
+    exits = {};
     static roomListObject = {
         'westRoom': {
             shortDescription: 'west room',
-            description: 'You are in the west end of a sloping east-west passage of barren rock',
+            description: 'You are in the west end of a sloping east-west passage of barren rock.',
             interactible: {
                 contents: ['platinumKey', 'water'],
             },
             exits: {
-                east: 'centerRoom'
+                east: {
+                    to: 'centerRoom'
+                },
             }
+        },
+        'centerRoom': {
+            shortDescription: 'center room',
+            description: 'the very heart of the dungeon, a windowless chamber lit only by the eerie light of glowing fungi high above. There is a prominent trophy stand in the middle, there is no trophy on it.',
+            interactible: {
+                contents: ['copperKey'],
+            },
+            exits: {},
         }
     }
     static roomList = {};
+
+    static findOne(roomName:string)
+    {
+        if (roomName in Room.roomList)
+        {
+            return Room.roomList[roomName];
+        }
+        for(var key in Room.roomList)
+        {
+            if(Room.roomList[key].shortDescription == roomName)
+            {
+                return Room.roomList[key];
+            }
+        }
+        return null;
+    }
+
+    public findExit(direction:string)
+    {
+        if (direction in this.exits)
+        {
+            return this.exits[direction];
+        }else{
+            return null;
+        }
+    }
 
     static reset() {
         Room.roomList = {};
@@ -323,6 +424,18 @@ class Room extends Unique {
             room.shortDescription = Room.roomListObject[key].shortDescription;
             room.description = Room.roomListObject[key].description;
             Room.roomList[key] = room;
+        }
+        // Make exits
+        for (var key in Room.roomListObject) {
+            for (var exitKey in Room.roomListObject[key].exits)
+            {
+                var exit = Room.roomListObject[key].exits[exitKey];
+                var roomExit = {};
+                roomExit['to'] = exit.to;
+                roomExit['toRoom'] = Room.findOne(exit.to);
+                roomExit['locked'] = exit.locked;
+                Room.roomList[key].exits[exitKey] = roomExit;
+            }
         }
     }
     constructor(name: string) {
@@ -347,7 +460,8 @@ Game.reset();
 
 // initial look command
 window.onload = ()=>{
-    console.log("here");
     var command = new Command('look');
     Game.execute(command);
+    // Focus on input
+    ( < HTMLInputElement > document.getElementById('command')).focus();
 }
