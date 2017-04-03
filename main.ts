@@ -12,19 +12,23 @@ var constants = {
 var variables = {
     gameStepText: [],
     gameText: [],
-
+    mute: false
 }
 
-function debug(string:string) {
+function debug(string) {
     if(constants.debug)
     {
         console.log(string);
     }
 }
+
 class Game {
     static savedGame = {};
-    static commandHistory:Array<Command> = [];
+    static commandHistory:Array<string> = [];
+    // static commandHistory:Array<Command> = [];
     static print(string: string) {
+        if(variables.mute)
+            return;
         // Save till endMarker, when endMarker comes, print it on screen
         if (string == constants.endMarker) {
             variables.gameText = variables.gameStepText.concat(variables.gameText);
@@ -33,6 +37,10 @@ class Game {
         } else {
             variables.gameStepText.push(string);
         }
+    }
+
+    static printBold(string:string) {
+        Game.print("<b>" + string + "</b>");
     }
 
     static save(command: Command) {
@@ -44,13 +52,22 @@ class Game {
     static load(command: Command) {
         if (command.object in Game.savedGame)
         {
-
+            Game.reset();
+            Game.clear();
+            variables.mute = true;
+            // TODO load game
+            for (let com of Game.savedGame[command.object])
+            {
+                // Execute each of those commands
+                Game.execute(new Command(com));
+            }
+            variables.mute = false;
             Game.print("Game loaded");
         }else{
             if(Object.keys(Game.savedGame).length > 0)
             {
                 Game.print("No such save game exists");
-                Game.print("Saved Games are:");
+                Game.print("Saved Games are :");
                 for(var key in Game.savedGame)
                 {
                     Game.print(key);
@@ -68,15 +85,19 @@ class Game {
         Game.commandHistory = [];
     }
 
+    static clear() {
+        var gameTextDiv = ( < HTMLElement > document.getElementById('gameText'));
+        gameTextDiv.innerHTML = "<p></p>";
+    }
+
     static execute(command: Command) {
-        Game.print(command.toString());
-        Game.commandHistory.push(command);
+        Game.printBold(command.toString());
+        if(!command.noSave){
+            Game.commandHistory.push(command.toString());
+            debug(Game.commandHistory);
+        }
         if(!command.checkValidity())
         {
-            if(command.defaultExtra)
-            {
-
-            }
             if(command.missedExtra)
                 Game.print(command.missedExtra);
             else
@@ -113,6 +134,9 @@ class Game {
                 case 'load':
                     Game.load(command);
                     break;
+                case 'clear':
+                    Game.clear();
+                    break;
                 default:
                     Game.print(constants.invalidCommand);
                     break;
@@ -139,7 +163,7 @@ class Game {
         pElement.style.whiteSpace = "-moz-pre-wrap";
         pElement.style.wordWrap = "break-word";
         for (var key in variables.gameStepText) {
-            pElement.textContent += variables.gameStepText[key] + "\n";
+            pElement.innerHTML += variables.gameStepText[key] + "\n";
             // divElement.appendChild(pElement);
         }
         gameTextDiv.insertBefore(pElement, gameTextDiv.firstChild);
@@ -148,7 +172,7 @@ class Game {
 }
 
 function has(array, element) {
-    return array.indexOf(element) > -1;
+    return array && array.indexOf(element) > -1;
 }
 
 class Command {
@@ -217,11 +241,13 @@ class Command {
             desc: 'Create a checkpoint that can be loaded later',
             extra: '[tag]',
             defaultExtra: 'saveGame',
+            noSave: true,
             missedExtra: 'Please specify tag to save under',
         },
         'load': {
             desc: 'Load a checkpoint that has been saved',
             extra: '[tag]',
+            noSave: true,
             defaultExtra: 'saveGame',
             missedExtra: 'Please specify tag to load from',
         },
@@ -240,8 +266,10 @@ class Command {
     object: string;
     missedExtra: string;
     defaultExtra: string;
-    constructor(verb?:string) {
-        var str = ( < HTMLInputElement > document.getElementById('command')).value;
+    noSave: boolean;
+    constructor(str?:string) {
+        if(!str)
+            var str = ( < HTMLInputElement > document.getElementById('command')).value;
         // splits string into an array of words, taking out all whitespace
         var parts = str.split(/\s+/);
         // command is the first word in the array, which is removed from the array
@@ -249,8 +277,6 @@ class Command {
         // the rest of the words joined together.  If there are no other words, this will be an empty string
         this.object = parts.join(' ');
         // if given as input, take that
-        if(verb)
-            this.verb = verb;
         // Check Validity
         this.checkValidity();
         // Clear the command
@@ -284,13 +310,26 @@ class Command {
         if (this.verb == '')
             return false;
         for (var key in Command.commands) {
+            var com = Command.commands[key];
+            // If shortcut, replace with actual command
+            if (com.shortcut) {
+                for (var dkey in com.shortcut) {
+                    if (this.verb == dkey) {
+                        this.verb = com.shortcut[dkey][0];
+                        this.object = com.shortcut[dkey][1];
+                    }
+                }
+            }
             // If command is one of direct commands, then it is valid
-            if (key == this.verb) {
+            // If command is one of the alternatives, its valid
+            if (key == this.verb || has(com.alternatives, this.verb)) {
                 // If required extra field is not given, then its not valid
-                if (Command.commands[key].extra)
+                this.verb = key;
+                this.noSave = com.noSave;
+                if (com.extra)
                     if (this.object == ''){
-                        this.missedExtra = Command.commands[key].missedExtra;
-                        this.defaultExtra = Command.commands[key].defaultExtra;
+                        this.missedExtra = com.missedExtra;
+                        this.defaultExtra = com.defaultExtra;
                         if(this.defaultExtra)
                         {
                             this.object = this.defaultExtra;
@@ -299,34 +338,6 @@ class Command {
                         return false;
                     }
                 return true;
-            }
-            // If command is one of the alternatives, its valid
-            if (Command.commands[key].alternatives)
-                if (has(Command.commands[key].alternatives, this.verb)) {
-                    // If required extra field is not given, then its not valid
-                    if (Command.commands[key].extra)
-                        if (this.object == ''){
-                            this.missedExtra = Command.commands[key].missedExtra;
-                            this.defaultExtra = Command.commands[key].defaultExtra;
-                            if(this.defaultExtra)
-                            {
-                                this.object = this.defaultExtra;
-                                return true;
-                            }
-                            return false;
-                        }
-                    this.verb = key;
-                    return true;
-                }
-            // If shortcut, replace with actual command
-            if (Command.commands[key].shortcut) {
-                for (var dkey in Command.commands[key].shortcut) {
-                    if (this.verb == dkey) {
-                        this.verb = Command.commands[key].shortcut[dkey][0];
-                        this.object = Command.commands[key].shortcut[dkey][1];
-                        return true;
-                    }
-                }
             }
         }
         return false;
@@ -407,6 +418,7 @@ class Character extends Unique {
             var exit = currentRoom.findExit(direction);
             if(exit)
             {
+                // TODO check if locked
                 player.location = exit.to;
                 return true;
             }else{
@@ -429,22 +441,25 @@ class Room extends Unique {
         'westRoom': {
             shortDescription: 'west room',
             description: 'You are in the west end of a sloping east-west passage of barren rock.',
-            interactible: {
-                contents: ['platinumKey', 'water'],
-            },
+            interactible: ['platinumKey', 'water'],
             exits: {
                 east: {
                     to: 'centerRoom'
+                },
+                up: {
+                    to: 'westRoom'
                 },
             }
         },
         'centerRoom': {
             shortDescription: 'center room',
             description: 'the very heart of the dungeon, a windowless chamber lit only by the eerie light of glowing fungi high above. There is a prominent trophy stand in the middle, there is no trophy on it.',
-            interactible: {
-                contents: ['copperKey'],
+            interactible: ['copperKey'],
+            exits: {
+                west: {
+                    to: 'westRoom'
+                }
             },
-            exits: {},
         }
     }
     static roomList = {};
@@ -504,7 +519,17 @@ class Room extends Unique {
     public describe() {
         Game.print(this.shortDescription);
         Game.print(this.description);
-
+        // print exits
+        var exitArray = Object.keys(this.exits)
+        var exitString = exitArray.join(', ');
+        if(exitArray.length>1)
+        {
+            Game.print("There are exits to " + exitString)
+        }
+        if(exitArray.length==1)
+        {
+            Game.print("There is an exit to " + exitString)
+        }
     }
 }
 
