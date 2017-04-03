@@ -102,44 +102,8 @@ var Game = (function () {
             else
                 Game.print(constants.invalidCommand);
         }
-        else {
-            switch (command.verb) {
-                case 'help':
-                    Command.generateHelp();
-                    break;
-                case 'look':
-                    Room.roomList[player.location].describe();
-                    break;
-                case 'go':
-                    if (player.moveTo(command.object))
-                        Room.roomList[player.location].describe();
-                    break;
-                case 'ls':
-                    player.printInventory();
-                    Game.print('..');
-                    Room.roomList[player.location].describe();
-                    break;
-                case 'inventory':
-                    player.printInventory();
-                    break;
-                case 'reset':
-                    Game.reset();
-                    Game.print('Game reset');
-                    break;
-                case 'save':
-                    Game.save(command);
-                    break;
-                case 'load':
-                    Game.load(command);
-                    break;
-                case 'clear':
-                    Game.clear();
-                    break;
-                default:
-                    Game.print(constants.invalidCommand);
-                    break;
-            }
-        }
+        else
+            command.execute();
         Game.print(constants.endMarker);
         Game.checkEasterEgg();
         Game.updateInventory();
@@ -220,6 +184,7 @@ var Command = (function () {
     };
     // Check if a given command is valid
     Command.prototype.checkValidity = function () {
+        var _this = this;
         // If no command entered invalid
         if (this.verb == '')
             return false;
@@ -240,6 +205,9 @@ var Command = (function () {
                 // If required extra field is not given, then its not valid
                 this.verb = key;
                 this.noSave = com.noSave;
+                this.execute = function () {
+                    com.execute(_this);
+                };
                 if (com.extra)
                     if (this.object == '') {
                         this.missedExtra = com.missedExtra;
@@ -260,11 +228,17 @@ var Command = (function () {
 Command.commands = {
     'inventory': {
         desc: 'Print inventory',
-        alternatives: ['inv']
+        alternatives: ['inv'],
+        execute: function (command) {
+            player.printInventory();
+        }
     },
     'look': {
         desc: 'Give description of the room you\'re in',
-        alternatives: ['info']
+        alternatives: ['info'],
+        execute: function (command) {
+            Room.roomList[player.location].describe();
+        }
     },
     'go': {
         desc: 'Go to the specified direction',
@@ -284,6 +258,10 @@ Command.commands = {
             'down': ['go', 'down'],
         },
         missedExtra: 'Please specify direction to go',
+        execute: function (command) {
+            if (player.moveTo(command.object))
+                Room.roomList[player.location].describe();
+        }
     },
     'take': {
         desc: 'Take an object',
@@ -316,7 +294,12 @@ Command.commands = {
         missedExtra: 'Please specify what to make',
     },
     'ls': {
-        desc: 'Combination of inventory and look'
+        desc: 'Combination of inventory and look',
+        execute: function (command) {
+            player.printInventory();
+            Game.print('..');
+            Room.roomList[player.location].describe();
+        }
     },
     'save': {
         desc: 'Create a checkpoint that can be loaded later',
@@ -324,6 +307,9 @@ Command.commands = {
         defaultExtra: 'saveGame',
         noSave: true,
         missedExtra: 'Please specify tag to save under',
+        execute: function (command) {
+            Game.save(command);
+        }
     },
     'load': {
         desc: 'Load a checkpoint that has been saved',
@@ -331,16 +317,29 @@ Command.commands = {
         noSave: true,
         defaultExtra: 'saveGame',
         missedExtra: 'Please specify tag to load from',
+        execute: function (command) {
+            Game.load(command);
+        }
     },
     'reset': {
         desc: 'Start game from beginning again',
-        alternatives: ['redo', 'reboot', 'restart']
+        alternatives: ['redo', 'reboot', 'restart'],
+        execute: function (command) {
+            Game.reset();
+            Game.print('Game reset');
+        }
     },
     'clear': {
-        desc: 'Clear the screen of game text'
+        desc: 'Clear the screen of game text',
+        execute: function (command) {
+            Game.clear();
+        }
     },
     'help': {
-        desc: 'Print this help menu'
+        desc: 'Print this help menu',
+        execute: function (command) {
+            Command.generateHelp();
+        }
     },
 };
 var Unique = (function () {

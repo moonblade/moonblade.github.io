@@ -7,7 +7,7 @@ var constants = {
     emptyInventory: 'Your inventory is empty',
     noExit: 'There is no exit in that direction',
     debug: true,
-    easterEgg: ['go up','go up','go down','go down','left ','right ','left ','right ','b ','a ']
+    easterEgg: ['go up', 'go up', 'go down', 'go down', 'left ', 'right ', 'left ', 'right ', 'b ', 'a ']
 }
 
 var variables = {
@@ -17,18 +17,17 @@ var variables = {
 }
 
 function debug(string) {
-    if(constants.debug)
-    {
+    if (constants.debug) {
         console.log(string);
     }
 }
 
 class Game {
     static savedGame = {};
-    static commandHistory:Array<string> = [];
+    static commandHistory: Array < string > = [];
     // static commandHistory:Array<Command> = [];
     static print(string: string) {
-        if(variables.mute)
+        if (variables.mute)
             return;
         // Save till endMarker, when endMarker comes, print it on screen
         if (string == constants.endMarker) {
@@ -40,7 +39,7 @@ class Game {
         }
     }
 
-    static printBold(string:string) {
+    static printBold(string: string) {
         Game.print("<b>" + string + "</b>");
     }
 
@@ -51,32 +50,28 @@ class Game {
     }
 
     static load(command: Command) {
-        if (command.object in Game.savedGame)
-        {
+        if (command.object in Game.savedGame) {
             Game.reset();
             Game.clear();
             variables.mute = true;
             // TODO load game
-            for (let com of Game.savedGame[command.object])
-            {
+            for (let com of Game.savedGame[command.object]) {
                 // Execute each of those commands
                 Game.execute(new Command(com));
             }
             variables.mute = false;
             Game.print("Game loaded");
-        }else{
-            if(Object.keys(Game.savedGame).length > 0)
-            {
+        } else {
+            if (Object.keys(Game.savedGame).length > 0) {
                 Game.print("No such save game exists");
                 Game.print("Saved Games are :");
-                for(var key in Game.savedGame)
-                {
+                for (var key in Game.savedGame) {
                     Game.print(key);
                 }
-            }else{
+            } else {
                 Game.print("No save games present");
             }
-            
+
         }
     }
 
@@ -93,56 +88,17 @@ class Game {
 
     static execute(command: Command) {
         Game.printBold(command.toString());
-        if(!command.noSave){
+        if (!command.noSave) {
             Game.commandHistory.push(command.toString());
             debug(Game.commandHistory);
         }
-        if(!command.checkValidity())
-        {
-            if(command.missedExtra)
+        if (!command.checkValidity()) {
+            if (command.missedExtra)
                 Game.print(command.missedExtra);
             else
                 Game.print(constants.invalidCommand);
-        }
-        else
-        {
-            switch (command.verb) {
-                case 'help':
-                    Command.generateHelp();
-                    break;
-                case 'look':
-                    Room.roomList[player.location].describe();
-                    break;
-                case 'go':
-                    if(player.moveTo(command.object))
-                        Room.roomList[player.location].describe();
-                    break;
-                case 'ls':
-                    player.printInventory();
-                    Game.print('..');
-                    Room.roomList[player.location].describe();
-                    break;
-                case 'inventory':
-                    player.printInventory();
-                    break;
-                case 'reset':
-                    Game.reset();
-                    Game.print('Game reset');
-                    break;
-                case 'save':
-                    Game.save(command);
-                    break;
-                case 'load':
-                    Game.load(command);
-                    break;
-                case 'clear':
-                    Game.clear();
-                    break;
-                default:
-                    Game.print(constants.invalidCommand);
-                    break;
-            }
-        }
+        } else 
+            command.execute();
         Game.print(constants.endMarker);
         Game.checkEasterEgg();
         Game.updateInventory();
@@ -152,8 +108,7 @@ class Game {
         var easterEggSize = constants.easterEgg.length;
         var easterEggString = JSON.stringify(constants.easterEgg);
         var lastCommandsString = JSON.stringify(Game.commandHistory.slice(-easterEggSize));
-        if(easterEggString == lastCommandsString)
-        {
+        if (easterEggString == lastCommandsString) {
             debug("EASTER EGG FOUND");
             // TODO add an interactible here
         }
@@ -193,11 +148,17 @@ class Command {
     static commands = {
         'inventory': {
             desc: 'Print inventory',
-            alternatives: ['inv']
+            alternatives: ['inv'],
+            execute: (command: Command) => {
+                player.printInventory();
+            }
         },
         'look': {
             desc: 'Give description of the room you\'re in',
-            alternatives: ['info']
+            alternatives: ['info'],
+            execute: (command: Command) => {
+                Room.roomList[player.location].describe();
+            }
         },
         'go': {
             desc: 'Go to the specified direction',
@@ -217,6 +178,11 @@ class Command {
                 'down': ['go', 'down'],
             },
             missedExtra: 'Please specify direction to go',
+            execute: (command: Command) => {
+                if (player.moveTo(command.object))
+                    Room.roomList[player.location].describe();
+
+            }
         },
         'take': {
             desc: 'Take an object',
@@ -249,7 +215,13 @@ class Command {
             missedExtra: 'Please specify what to make',
         },
         'ls': {
-            desc: 'Combination of inventory and look'
+            desc: 'Combination of inventory and look',
+            execute: (command: Command) => {
+                player.printInventory();
+                Game.print('..');
+                Room.roomList[player.location].describe();
+
+            }
         },
         'save': {
             desc: 'Create a checkpoint that can be loaded later',
@@ -257,6 +229,9 @@ class Command {
             defaultExtra: 'saveGame',
             noSave: true,
             missedExtra: 'Please specify tag to save under',
+            execute: (command: Command) => {
+                Game.save(command);
+            }
         },
         'load': {
             desc: 'Load a checkpoint that has been saved',
@@ -264,16 +239,29 @@ class Command {
             noSave: true,
             defaultExtra: 'saveGame',
             missedExtra: 'Please specify tag to load from',
+            execute: (command: Command) => {
+                Game.load(command);
+            }
         },
         'reset': {
             desc: 'Start game from beginning again',
-            alternatives: ['redo', 'reboot', 'restart']
+            alternatives: ['redo', 'reboot', 'restart'],
+            execute: (command: Command) => {
+                Game.reset();
+                Game.print('Game reset');
+            }
         },
         'clear': {
-            desc: 'Clear the screen of game text'
+            desc: 'Clear the screen of game text',
+            execute: (command: Command) => {
+                Game.clear();
+            }
         },
         'help': {
-            desc: 'Print this help menu'
+            desc: 'Print this help menu',
+            execute: (command: Command) => {
+                Command.generateHelp();
+            }
         },
     }
     verb: string;
@@ -281,8 +269,9 @@ class Command {
     missedExtra: string;
     defaultExtra: string;
     noSave: boolean;
-    constructor(str?:string) {
-        if(!str)
+    execute;
+    constructor(str ? : string) {
+        if (!str)
             var str = ( < HTMLInputElement > document.getElementById('command')).value;
         // splits string into an array of words, taking out all whitespace
         var parts = str.split(/\s+/);
@@ -340,12 +329,14 @@ class Command {
                 // If required extra field is not given, then its not valid
                 this.verb = key;
                 this.noSave = com.noSave;
+                this.execute = () => {
+                    com.execute(this);
+                }
                 if (com.extra)
-                    if (this.object == ''){
+                    if (this.object == '') {
                         this.missedExtra = com.missedExtra;
                         this.defaultExtra = com.defaultExtra;
-                        if(this.defaultExtra)
-                        {
+                        if (this.defaultExtra) {
                             this.object = this.defaultExtra;
                             return true;
                         }
@@ -366,8 +357,8 @@ class Unique {
 }
 
 class Interactible {
-    public shortDescription:string;
-    public description:string;
+    public shortDescription: string;
+    public description: string;
     public take;
     static interactibleListObject = {
         platinumKey: {
@@ -386,10 +377,8 @@ class Interactible {
         Interactible.interactibleList = JSON.parse(JSON.stringify(Interactible.interactibleListObject));
     }
 
-    static findOne(identifier:string)
-    {
-        if (identifier in Interactible.interactibleList)
-        {
+    static findOne(identifier: string) {
+        if (identifier in Interactible.interactibleList) {
             return Interactible.interactibleList[identifier];
         }
     }
@@ -413,15 +402,14 @@ class Character extends Unique {
         return inventoryString;
     }
 
-    public inventoryEmpty(){
-        return this.inventory.length<1;
+    public inventoryEmpty() {
+        return this.inventory.length < 1;
     }
 
     public printInventory() {
-        if(!this.inventoryEmpty())
-        {
+        if (!this.inventoryEmpty()) {
             Game.print("You are carrying: ");
-            for(var item of this.inventory){
+            for (var item of this.inventory) {
                 // TODO Change to description of item
                 Game.print(item);
             }
@@ -440,28 +428,26 @@ class Character extends Unique {
 
     public reset() {
         this.location = constants.startLocation;
-        this.inventory = [];        
-        if(constants.debug)
-        {
+        this.inventory = [];
+        if (constants.debug) {
             this.inventory = ['some', 'stuff', 'other', 'good']
         }
     }
 
     public moveTo(direction: string) {
-        var currentRoom:Room = Room.findOne(this.location);
-        if(currentRoom!=null){
+        var currentRoom: Room = Room.findOne(this.location);
+        if (currentRoom != null) {
             var exit = currentRoom.findExit(direction);
-            if(exit)
-            {
+            if (exit) {
                 // TODO check if locked
                 player.location = exit.to;
                 return true;
-            }else{
+            } else {
                 Game.print(constants.noExit);
                 return false;
             }
-        // this.location = location;
-        }else{
+            // this.location = location;
+        } else {
             Game.print('Current location errored, please restart the game');
             return false;
         }
@@ -482,7 +468,7 @@ class Room extends Unique {
                     to: 'centerRoom'
                 },
                 up: {
-                    to: 'westRoom' ,
+                    to: 'westRoom',
                     locked: 'woodenDoor'
                 },
             }
@@ -500,28 +486,22 @@ class Room extends Unique {
     }
     static roomList = {};
 
-    static findOne(roomName:string)
-    {
-        if (roomName in Room.roomList)
-        {
+    static findOne(roomName: string) {
+        if (roomName in Room.roomList) {
             return Room.roomList[roomName];
         }
-        for(var key in Room.roomList)
-        {
-            if(Room.roomList[key].shortDescription == roomName)
-            {
+        for (var key in Room.roomList) {
+            if (Room.roomList[key].shortDescription == roomName) {
                 return Room.roomList[key];
             }
         }
         return null;
     }
 
-    public findExit(direction:string)
-    {
-        if (direction in this.exits)
-        {
+    public findExit(direction: string) {
+        if (direction in this.exits) {
             return this.exits[direction];
-        }else{
+        } else {
             return null;
         }
     }
@@ -536,8 +516,7 @@ class Room extends Unique {
         }
         // Make exits
         for (var key in Room.roomListObject) {
-            for (var exitKey in Room.roomListObject[key].exits)
-            {
+            for (var exitKey in Room.roomListObject[key].exits) {
                 var exit = Room.roomListObject[key].exits[exitKey];
                 var roomExit = {};
                 roomExit['to'] = exit.to;
@@ -558,19 +537,15 @@ class Room extends Unique {
         // print exits
         var exitArray = Object.keys(this.exits)
         var exitString = exitArray.join(', ');
-        if(exitArray.length>1)
-        {
+        if (exitArray.length > 1) {
             Game.print("There are exits to " + exitString)
         }
-        if(exitArray.length==1)
-        {
+        if (exitArray.length == 1) {
             Game.print("There is an exit to " + exitString)
         }
-        for(var key in this.exits)
-        {
-            if(this.exits[key].locked)
-            {
-                var lockDescription:string = "The "+key+" exit is locked.";
+        for (var key in this.exits) {
+            if (this.exits[key].locked) {
+                var lockDescription: string = "The " + key + " exit is locked.";
                 // TODO, add description of door here
 
                 Game.print(lockDescription);
@@ -588,7 +563,7 @@ let player = new Character(constants.defaultPlayerName);
 Game.reset();
 
 // initial look command
-window.onload = ()=>{
+window.onload = () => {
     var command = new Command('look');
     Game.execute(command);
     // Focus on input
