@@ -1,3 +1,4 @@
+/// <reference path="js/jquery.d.ts" />
 var constants = {
     defaultPlayerName: 'player',
     startLocation: 'westRoom',
@@ -6,7 +7,7 @@ var constants = {
     emptyInventory: 'Your inventory is empty',
     noExit: 'There is no exit in that direction',
     debug: true,
-    
+    easterEgg: ['go up','go up','go down','go down','left ','right ','left ','right ','b ','a ']
 }
 
 var variables = {
@@ -143,7 +144,19 @@ class Game {
             }
         }
         Game.print(constants.endMarker);
+        Game.checkEasterEgg();
         Game.updateInventory();
+    }
+
+    static checkEasterEgg() {
+        var easterEggSize = constants.easterEgg.length;
+        var easterEggString = JSON.stringify(constants.easterEgg);
+        var lastCommandsString = JSON.stringify(Game.commandHistory.slice(-easterEggSize));
+        if(easterEggString == lastCommandsString)
+        {
+            debug("EASTER EGG FOUND");
+            // TODO add an interactible here
+        }
     }
 
     static updateInventory() {
@@ -153,7 +166,6 @@ class Game {
     // Send the gameStep to the screen
     static updateGameScreen() {
         var gameTextDiv = ( < HTMLElement > document.getElementById('gameText'))
-        // var divElement = document.createElement("div");
         var pElement = document.createElement("pre");
         // Browser compatible pre element word wrap
         pElement.style.display = "table";
@@ -164,13 +176,15 @@ class Game {
         pElement.style.wordWrap = "break-word";
         for (var key in variables.gameStepText) {
             pElement.innerHTML += variables.gameStepText[key] + "\n";
-            // divElement.appendChild(pElement);
         }
         gameTextDiv.insertBefore(pElement, gameTextDiv.firstChild);
 
     }
 }
 
+// Can be used to check if element present in array, or substring present in string 
+// second one is kind of hack
+// TODO remove hack and do properly
 function has(array, element) {
     return array && array.indexOf(element) > -1;
 }
@@ -351,13 +365,34 @@ class Unique {
     public desc: string;
 }
 
-class interactible {
+class Interactible {
+    public shortDescription:string;
+    public description:string;
+    public take;
     static interactibleListObject = {
         platinumKey: {
-            shortDescription: 'platinum key'
+            shortDescription: 'platinum key',
+            description: 'The key is made out of solid platinum, It must have cost a lot to make. It has an intricate pattern of a rose engraved on it.',
+            take: {
+                description: 'You bend down and pick up the platinum key. You examine it for a second and slip it in your pocket.',
+                able: true,
+            },
         }
     };
     static interactibleList = {};
+
+    static reset() {
+        // TODO use jquery to remove this hack
+        Interactible.interactibleList = JSON.parse(JSON.stringify(Interactible.interactibleListObject));
+    }
+
+    static findOne(identifier:string)
+    {
+        if (identifier in Interactible.interactibleList)
+        {
+            return Interactible.interactibleList[identifier];
+        }
+    }
 }
 
 class Character extends Unique {
@@ -447,13 +482,14 @@ class Room extends Unique {
                     to: 'centerRoom'
                 },
                 up: {
-                    to: 'westRoom'
+                    to: 'westRoom' ,
+                    locked: 'woodenDoor'
                 },
             }
         },
         'centerRoom': {
             shortDescription: 'center room',
-            description: 'the very heart of the dungeon, a windowless chamber lit only by the eerie light of glowing fungi high above. There is a prominent trophy stand in the middle, there is no trophy on it.',
+            description: 'You are in the very heart of the dungeon, a windowless chamber lit only by the eerie light of glowing fungi high above. There is a prominent trophy stand in the middle, there is no trophy on it.',
             interactible: ['copperKey'],
             exits: {
                 west: {
@@ -529,6 +565,16 @@ class Room extends Unique {
         if(exitArray.length==1)
         {
             Game.print("There is an exit to " + exitString)
+        }
+        for(var key in this.exits)
+        {
+            if(this.exits[key].locked)
+            {
+                var lockDescription:string = "The "+key+" exit is locked.";
+                // TODO, add description of door here
+
+                Game.print(lockDescription);
+            }
         }
     }
 }

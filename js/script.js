@@ -8,6 +8,7 @@ var __extends = (this && this.__extends) || (function () {
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
 })();
+/// <reference path="js/jquery.d.ts" />
 var constants = {
     defaultPlayerName: 'player',
     startLocation: 'westRoom',
@@ -16,6 +17,7 @@ var constants = {
     emptyInventory: 'Your inventory is empty',
     noExit: 'There is no exit in that direction',
     debug: true,
+    easterEgg: ['go up', 'go up', 'go down', 'go down', 'left ', 'right ', 'left ', 'right ', 'b ', 'a ']
 };
 var variables = {
     gameStepText: [],
@@ -139,7 +141,17 @@ var Game = (function () {
             }
         }
         Game.print(constants.endMarker);
+        Game.checkEasterEgg();
         Game.updateInventory();
+    };
+    Game.checkEasterEgg = function () {
+        var easterEggSize = constants.easterEgg.length;
+        var easterEggString = JSON.stringify(constants.easterEgg);
+        var lastCommandsString = JSON.stringify(Game.commandHistory.slice(-easterEggSize));
+        if (easterEggString == lastCommandsString) {
+            debug("EASTER EGG FOUND");
+            // TODO add an interactible here
+        }
     };
     Game.updateInventory = function () {
         document.getElementById("inventory").innerHTML = "Inventory : " + player.toStringInventory();
@@ -147,7 +159,6 @@ var Game = (function () {
     // Send the gameStep to the screen
     Game.updateGameScreen = function () {
         var gameTextDiv = document.getElementById('gameText');
-        // var divElement = document.createElement("div");
         var pElement = document.createElement("pre");
         // Browser compatible pre element word wrap
         pElement.style.display = "table";
@@ -158,7 +169,6 @@ var Game = (function () {
         pElement.style.wordWrap = "break-word";
         for (var key in variables.gameStepText) {
             pElement.innerHTML += variables.gameStepText[key] + "\n";
-            // divElement.appendChild(pElement);
         }
         gameTextDiv.insertBefore(pElement, gameTextDiv.firstChild);
     };
@@ -166,6 +176,9 @@ var Game = (function () {
 }());
 Game.savedGame = {};
 Game.commandHistory = [];
+// Can be used to check if element present in array, or substring present in string 
+// second one is kind of hack
+// TODO remove hack and do properly
 function has(array, element) {
     return array && array.indexOf(element) > -1;
 }
@@ -336,17 +349,31 @@ var Unique = (function () {
     return Unique;
 }());
 Unique.ids = [];
-var interactible = (function () {
-    function interactible() {
+var Interactible = (function () {
+    function Interactible() {
     }
-    return interactible;
+    Interactible.reset = function () {
+        // TODO use jquery to remove this hack
+        Interactible.interactibleList = JSON.parse(JSON.stringify(Interactible.interactibleListObject));
+    };
+    Interactible.findOne = function (identifier) {
+        if (identifier in Interactible.interactibleList) {
+            return Interactible.interactibleList[identifier];
+        }
+    };
+    return Interactible;
 }());
-interactible.interactibleListObject = {
+Interactible.interactibleListObject = {
     platinumKey: {
-        shortDescription: 'platinum key'
+        shortDescription: 'platinum key',
+        description: 'The key is made out of solid platinum, It must have cost a lot to make. It has an intricate pattern of a rose engraved on it.',
+        take: {
+            description: 'You bend down and pick up the platinum key. You examine it for a second and slip it in your pocket.',
+            able: true,
+        },
     }
 };
-interactible.interactibleList = {};
+Interactible.interactibleList = {};
 var Character = (function (_super) {
     __extends(Character, _super);
     function Character(name) {
@@ -476,6 +503,13 @@ var Room = (function (_super) {
         if (exitArray.length == 1) {
             Game.print("There is an exit to " + exitString);
         }
+        for (var key in this.exits) {
+            if (this.exits[key].locked) {
+                var lockDescription = "The " + key + " exit is locked.";
+                // TODO, add description of door here
+                Game.print(lockDescription);
+            }
+        }
     };
     return Room;
 }(Unique));
@@ -489,13 +523,14 @@ Room.roomListObject = {
                 to: 'centerRoom'
             },
             up: {
-                to: 'westRoom'
+                to: 'westRoom',
+                locked: 'woodenDoor'
             },
         }
     },
     'centerRoom': {
         shortDescription: 'center room',
-        description: 'the very heart of the dungeon, a windowless chamber lit only by the eerie light of glowing fungi high above. There is a prominent trophy stand in the middle, there is no trophy on it.',
+        description: 'You are in the very heart of the dungeon, a windowless chamber lit only by the eerie light of glowing fungi high above. There is a prominent trophy stand in the middle, there is no trophy on it.',
         interactible: ['copperKey'],
         exits: {
             west: {
