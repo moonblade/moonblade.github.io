@@ -26,7 +26,7 @@ var variables = {
 };
 function debug(string) {
     if (constants.debug) {
-        console.log(string);
+        console.log("d:", string);
     }
 }
 var Game = (function () {
@@ -84,6 +84,7 @@ var Game = (function () {
     Game.reset = function () {
         player.reset();
         Room.reset();
+        Interactible.reset();
         Game.commandHistory = [];
     };
     Game.clear = function () {
@@ -94,7 +95,6 @@ var Game = (function () {
         Game.printBold(command.toString());
         if (!command.noSave) {
             Game.commandHistory.push(command.toString());
-            debug(Game.commandHistory);
         }
         if (!command.checkValidity()) {
             if (command.missedExtra)
@@ -144,7 +144,7 @@ Game.commandHistory = [];
 // second one is kind of hack
 // TODO remove hack and do properly
 function has(array, element) {
-    return array && array.indexOf(element) > -1;
+    return array && (array.indexOf(element) > -1);
 }
 var Command = (function () {
     function Command(str) {
@@ -206,7 +206,8 @@ var Command = (function () {
                 this.verb = key;
                 this.noSave = com.noSave;
                 this.execute = function () {
-                    com.execute(_this);
+                    if (com.execute)
+                        com.execute(_this);
                 };
                 if (com.extra)
                     if (this.object == '') {
@@ -240,6 +241,22 @@ Command.commands = {
             Room.roomList[player.location].describe();
         }
     },
+    'examine': {
+        desc: 'Give description of the item',
+        extra: ['item'],
+        alternatives: ['ex'],
+        missedExtra: 'Please specify what to examine',
+        execute: function (command) {
+            var inRoom = Room.currentRoom().has(command.object);
+            var withPlayer = player.has(command.object);
+            debug(player.has(command.object));
+            debug(command.object);
+            if (inRoom)
+                Game.print(Interactible.findOne(inRoom).description);
+            else if (withPlayer)
+                Game.print(Interactible.findOne(withPlayer).description);
+        }
+    },
     'go': {
         desc: 'Go to the specified direction',
         alternatives: ['move', 'walk'],
@@ -268,6 +285,8 @@ Command.commands = {
         alternatives: ['pick', 'fill'],
         extra: '[object]',
         missedExtra: 'Please specify what to take',
+        execute: function (command) {
+        }
     },
     'put': {
         desc: 'Put an object',
@@ -359,6 +378,11 @@ var Interactible = (function () {
         if (identifier in Interactible.interactibleList) {
             return Interactible.interactibleList[identifier];
         }
+        for (var key in Interactible.interactibleList) {
+            var inter = Interactible.interactibleList[key];
+            if (has(inter.shortDescription, identifier))
+                return inter;
+        }
     };
     return Interactible;
 }());
@@ -386,7 +410,8 @@ var Character = (function (_super) {
         var inventoryString = "";
         for (var _i = 0, _a = this.inventory; _i < _a.length; _i++) {
             var element = _a[_i];
-            inventoryString += element + ", ";
+            var interactible = Interactible.findOne(element);
+            inventoryString += interactible.shortDescription + ", ";
         }
         return inventoryString;
     };
@@ -399,7 +424,8 @@ var Character = (function (_super) {
             for (var _i = 0, _a = this.inventory; _i < _a.length; _i++) {
                 var item = _a[_i];
                 // TODO Change to description of item
-                Game.print(item);
+                var interactible = Interactible.findOne(item);
+                Game.print(interactible.shortDescription);
             }
         }
         else {
@@ -407,22 +433,34 @@ var Character = (function (_super) {
         }
     };
     Character.prototype.has = function (searchItem) {
+        if (searchItem in this.inventory)
+            return searchItem;
         for (var _i = 0, _a = this.inventory; _i < _a.length; _i++) {
             var item = _a[_i];
-            has(item, searchItem);
-            return true;
+            var interactible = Interactible.findOne(item);
+            if (has(interactible.shortDescription, searchItem))
+                return item;
         }
         return false;
+    };
+    Character.prototype.hasAll = function (searchArray) {
+        if (!searchArray || searchArray.length < 1)
+            return true;
+        for (var key in searchArray) {
+            if (!this.has(searchArray[key]))
+                return false;
+        }
+        return true;
     };
     Character.prototype.reset = function () {
         this.location = constants.startLocation;
         this.inventory = [];
         if (constants.debug) {
-            this.inventory = ['some', 'stuff', 'other', 'good'];
+            this.inventory = ['platinumKey'];
         }
     };
     Character.prototype.moveTo = function (direction) {
-        var currentRoom = Room.findOne(this.location);
+        var currentRoom = Room.currentRoom();
         if (currentRoom != null) {
             var exit = currentRoom.findExit(direction);
             if (exit) {
@@ -451,6 +489,9 @@ var Room = (function (_super) {
         _this.name = name;
         return _this;
     }
+    Room.currentRoom = function () {
+        return Room.findOne(player.location);
+    };
     Room.findOne = function (roomName) {
         if (roomName in Room.roomList) {
             return Room.roomList[roomName];
@@ -461,6 +502,18 @@ var Room = (function (_super) {
             }
         }
         return null;
+    };
+    Room.prototype.has = function (identifier) {
+        for (var _i = 0, _a = this.interactible; _i < _a.length; _i++) {
+            var element = _a[_i];
+            // Check if element is part of room, else if shortDescription in room
+            if (has(element, identifier))
+                return element;
+            var interactible = Interactible.findOne(element);
+            if (interactible && has(interactible.shortDescription, identifier))
+                return element;
+        }
+        return false;
     };
     Room.prototype.findExit = function (direction) {
         if (direction in this.exits) {
@@ -476,6 +529,7 @@ var Room = (function (_super) {
             var room = new Room(key);
             room.shortDescription = Room.roomListObject[key].shortDescription;
             room.description = Room.roomListObject[key].description;
+            room.interactible = Room.roomListObject[key].interactible;
             Room.roomList[key] = room;
         }
         // Make exits
