@@ -58,14 +58,14 @@ var Game = (function () {
         if (command.object in Game.savedGame) {
             Game.reset();
             Game.clear();
-            variables.mute = true;
+            Game.mute();
             // TODO load game
             for (var _i = 0, _a = Game.savedGame[command.object]; _i < _a.length; _i++) {
                 var com = _a[_i];
                 // Execute each of those commands
                 Game.execute(new Command(com));
             }
-            variables.mute = false;
+            Game.unmute();
             Game.print("Game loaded");
         }
         else {
@@ -87,11 +87,19 @@ var Game = (function () {
         Interactible.reset();
         Game.commandHistory = [];
     };
+    Game.mute = function () {
+        variables.mute = true;
+    };
+    Game.unmute = function () {
+        variables.mute = false;
+    };
     Game.clear = function () {
         var gameTextDiv = document.getElementById('gameText');
         gameTextDiv.innerHTML = "<p></p>";
     };
     Game.execute = function (command) {
+        if (command.silent)
+            Game.mute();
         Game.printBold(command.toString());
         if (!command.noSave) {
             Game.commandHistory.push(command.toString());
@@ -105,6 +113,8 @@ var Game = (function () {
         else
             command.execute();
         Game.print(constants.endMarker);
+        if (command.silent)
+            Game.unmute();
         Game.checkEasterEgg();
         Game.updateInventory();
     };
@@ -118,7 +128,7 @@ var Game = (function () {
         }
     };
     Game.updateInventory = function () {
-        document.getElementById("inventory").innerHTML = "Inventory : " + player.toStringInventory();
+        document.getElementById("inventory").innerHTML = "<b>Inventory :</b> " + player.toStringInventory();
     };
     // Send the gameStep to the screen
     Game.updateGameScreen = function () {
@@ -162,6 +172,15 @@ var Command = (function () {
         // Clear the command
         document.getElementById('command').value = "";
     }
+    Command.generateControlString = function () {
+        var controlString = "<b>Controls :</b> ";
+        for (var key in Command.commands) {
+            var command = Command.commands[key];
+            var extra = (command.extra ? " " + command.extra : "");
+            controlString += key + extra + ", ";
+        }
+        return controlString;
+    };
     Command.prototype.toString = function () {
         return this.verb + " " + this.object;
     };
@@ -205,6 +224,7 @@ var Command = (function () {
                 // If required extra field is not given, then its not valid
                 this.verb = key;
                 this.noSave = com.noSave;
+                this.silent = com.silent;
                 this.execute = function () {
                     if (com.execute)
                         com.execute(_this);
@@ -243,25 +263,18 @@ Command.commands = {
     },
     'examine': {
         desc: 'Give description of the item',
-        extra: ['item'],
+        extra: '[item]',
         alternatives: ['ex'],
         missedExtra: 'Please specify what to examine',
         execute: function (command) {
-            var inRoom = Room.currentRoom().has(command.object);
-            var withPlayer = player.has(command.object);
-            debug(player.has(command.object));
-            debug(command.object);
-            if (inRoom)
-                Game.print(Interactible.findOne(inRoom).description);
-            else if (withPlayer)
-                Game.print(Interactible.findOne(withPlayer).description);
+            player.examine(command.object);
         }
     },
     'go': {
         desc: 'Go to the specified direction',
         alternatives: ['move', 'walk'],
         extraDescription: '\tYou can also use north, east, south, west, up, down, n, e, s, w as well',
-        extra: ['[direction]'],
+        extra: '[direction]',
         shortcut: {
             'north': ['go', 'north'],
             'n': ['go', 'north'],
@@ -286,6 +299,7 @@ Command.commands = {
         extra: '[object]',
         missedExtra: 'Please specify what to take',
         execute: function (command) {
+            player.take(command.object);
         }
     },
     'put': {
@@ -350,6 +364,7 @@ Command.commands = {
     },
     'clear': {
         desc: 'Clear the screen of game text',
+        silent: true,
         execute: function (command) {
             Game.clear();
         }
@@ -417,6 +432,22 @@ var Character = (function (_super) {
     };
     Character.prototype.inventoryEmpty = function () {
         return this.inventory.length < 1;
+    };
+    Character.prototype.examine = function (identifier) {
+        var inRoom = Room.currentRoom().has(identifier);
+        var withPlayer = player.has(identifier);
+        if (inRoom)
+            Game.print(Interactible.findOne(inRoom).description);
+        else if (withPlayer)
+            Game.print(Interactible.findOne(withPlayer).description);
+    };
+    Character.prototype.take = function (identifier) {
+        var inRoom = Room.currentRoom().has(identifier);
+        if (inRoom) {
+        }
+        else {
+            Game.print("Could not find ");
+        }
     };
     Character.prototype.printInventory = function () {
         if (!this.inventoryEmpty()) {
@@ -604,5 +635,6 @@ window.onload = function () {
     var command = new Command('look');
     Game.execute(command);
     // Focus on input
+    document.getElementById('controls').innerHTML = Command.generateControlString();
     document.getElementById('command').focus();
 };

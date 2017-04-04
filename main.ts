@@ -53,13 +53,13 @@ class Game {
         if (command.object in Game.savedGame) {
             Game.reset();
             Game.clear();
-            variables.mute = true;
+            Game.mute();
             // TODO load game
             for (let com of Game.savedGame[command.object]) {
                 // Execute each of those commands
                 Game.execute(new Command(com));
             }
-            variables.mute = false;
+            Game.unmute();
             Game.print("Game loaded");
         } else {
             if (Object.keys(Game.savedGame).length > 0) {
@@ -82,12 +82,22 @@ class Game {
         Game.commandHistory = [];
     }
 
+    static mute() {
+        variables.mute = true;
+    }
+
+    static unmute() {
+        variables.mute = false;
+    }
+
     static clear() {
         var gameTextDiv = ( < HTMLElement > document.getElementById('gameText'));
         gameTextDiv.innerHTML = "<p></p>";
     }
 
     static execute(command: Command) {
+        if(command.silent)
+            Game.mute();
         Game.printBold(command.toString());
         if (!command.noSave) {
             Game.commandHistory.push(command.toString());
@@ -100,6 +110,8 @@ class Game {
         } else
             command.execute();
         Game.print(constants.endMarker);
+        if(command.silent)
+            Game.unmute();
         Game.checkEasterEgg();
         Game.updateInventory();
     }
@@ -115,7 +127,7 @@ class Game {
     }
 
     static updateInventory() {
-        ( < HTMLParagraphElement > document.getElementById("inventory")).innerHTML = "Inventory : " + player.toStringInventory();
+        ( < HTMLParagraphElement > document.getElementById("inventory")).innerHTML = "<b>Inventory :</b> " + player.toStringInventory();
     }
 
     // Send the gameStep to the screen
@@ -163,25 +175,18 @@ class Command {
         },
         'examine': {
             desc: 'Give description of the item',
-            extra: ['item'],
+            extra: '[item]',
             alternatives: ['ex'],
             missedExtra: 'Please specify what to examine',
             execute: (command: Command) => {
-                var inRoom = Room.currentRoom().has(command.object);
-                var withPlayer = player.has(command.object);
-                debug(player.has(command.object))
-                debug(command.object)
-                if(inRoom)
-                    Game.print(Interactible.findOne(inRoom).description);
-                else if(withPlayer)
-                    Game.print(Interactible.findOne(withPlayer).description);
+                player.examine(command.object);
             }
         },
         'go': {
             desc: 'Go to the specified direction',
             alternatives: ['move', 'walk'],
             extraDescription: '\tYou can also use north, east, south, west, up, down, n, e, s, w as well',
-            extra: ['[direction]'],
+            extra: '[direction]',
             shortcut: {
                 'north': ['go', 'north'],
                 'n': ['go', 'north'],
@@ -206,8 +211,8 @@ class Command {
             alternatives: ['pick', 'fill'],
             extra: '[object]',
             missedExtra: 'Please specify what to take',
-            execute: (command:Command) => {
-
+            execute: (command: Command) => {
+                player.take(command.object);
             }
         },
         'put': {
@@ -273,6 +278,7 @@ class Command {
         },
         'clear': {
             desc: 'Clear the screen of game text',
+            silent: true,
             execute: (command: Command) => {
                 Game.clear();
             }
@@ -290,6 +296,7 @@ class Command {
     defaultExtra: string;
     noSave: boolean;
     execute;
+    silent: boolean;
     constructor(str ? : string) {
         if (!str)
             var str = ( < HTMLInputElement > document.getElementById('command')).value;
@@ -306,6 +313,17 @@ class Command {
         ( < HTMLInputElement > document.getElementById('command')).value = "";
     }
 
+
+    static generateControlString() {
+        var controlString = "<b>Controls :</b> ";
+        for(var key in Command.commands)
+        {
+            var command = Command.commands[key];
+            var extra = (command.extra ? " " + command.extra : "");
+            controlString += key + extra + ", ";         
+        }
+        return controlString;
+    }
 
     public toString() {
         return this.verb + " " + this.object;
@@ -349,6 +367,7 @@ class Command {
                 // If required extra field is not given, then its not valid
                 this.verb = key;
                 this.noSave = com.noSave;
+                this.silent = com.silent;
                 this.execute = () => {
                     if (com.execute)
                         com.execute(this);
@@ -423,7 +442,7 @@ class Character extends Unique {
     public toStringInventory() {
         var inventoryString = "";
         for (var element of this.inventory) {
-            var interactible:Interactible = Interactible.findOne(element);
+            var interactible: Interactible = Interactible.findOne(element);
             inventoryString += interactible.shortDescription + ", ";
         }
         return inventoryString;
@@ -433,12 +452,31 @@ class Character extends Unique {
         return this.inventory.length < 1;
     }
 
+    public examine(identifier: string) {
+        var inRoom = Room.currentRoom().has(identifier);
+        var withPlayer = player.has(identifier);
+        if (inRoom)
+            Game.print(Interactible.findOne(inRoom).description);
+        else if (withPlayer)
+            Game.print(Interactible.findOne(withPlayer).description);
+    }
+
+    public take(identifier: string){
+        var inRoom = Room.currentRoom().has(identifier);
+        if(inRoom)
+        {
+
+        }else{
+            Game.print("Could not find ")
+        }
+    }
+
     public printInventory() {
         if (!this.inventoryEmpty()) {
             Game.print("You are carrying: ");
             for (var item of this.inventory) {
                 // TODO Change to description of item
-                var interactible:Interactible = Interactible.findOne(item);
+                var interactible: Interactible = Interactible.findOne(item);
                 Game.print(interactible.shortDescription);
             }
         } else {
@@ -448,22 +486,21 @@ class Character extends Unique {
     }
 
     public has(searchItem: string) {
-        if(searchItem in this.inventory)
+        if (searchItem in this.inventory)
             return searchItem;
         for (let item of this.inventory) {
-            var interactible:Interactible = Interactible.findOne(item);
-            if(has(interactible.shortDescription, searchItem))
+            var interactible: Interactible = Interactible.findOne(item);
+            if (has(interactible.shortDescription, searchItem))
                 return item;
         }
         return false;
     }
 
     public hasAll(searchArray) {
-        if(!searchArray || searchArray.length<1)
+        if (!searchArray || searchArray.length < 1)
             return true;
-        for(var key in searchArray)
-        {
-            if(!this.has(searchArray[key]))
+        for (var key in searchArray) {
+            if (!this.has(searchArray[key]))
                 return false;
         }
         return true;
@@ -503,9 +540,9 @@ class Room extends Unique {
     shortDescription: string;
     description: string;
     exits = {};
-    interactible: Array<string>;
+    interactible: Array < string > ;
 
-    
+
     static roomListObject = {
         'westRoom': {
             shortDescription: 'west room',
@@ -537,7 +574,7 @@ class Room extends Unique {
     static currentRoom() {
         return Room.findOne(player.location);
     }
-    
+
     static findOne(roomName: string) {
         if (roomName in Room.roomList) {
             return Room.roomList[roomName];
@@ -550,14 +587,13 @@ class Room extends Unique {
         return null;
     }
 
-    public has(identifier:string) {
-        for(var element of this.interactible)
-        {
+    public has(identifier: string) {
+        for (var element of this.interactible) {
             // Check if element is part of room, else if shortDescription in room
-            if(has(element, identifier))
+            if (has(element, identifier))
                 return element;
-            var interactible:Interactible = Interactible.findOne(element);
-            if(interactible && has(interactible.shortDescription, identifier))
+            var interactible: Interactible = Interactible.findOne(element);
+            if (interactible && has(interactible.shortDescription, identifier))
                 return element;
         }
         return false;
@@ -633,5 +669,6 @@ window.onload = () => {
     var command = new Command('look');
     Game.execute(command);
     // Focus on input
+    ( < HTMLElement > document.getElementById('controls')).innerHTML = Command.generateControlString();
     ( < HTMLInputElement > document.getElementById('command')).focus();
 }
