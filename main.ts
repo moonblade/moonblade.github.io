@@ -7,7 +7,8 @@ var constants = {
     emptyInventory: 'Your inventory is empty',
     noExit: 'There is no exit in that direction',
     debug: true,
-    easterEgg: ['go up', 'go up', 'go down', 'go down', 'left ', 'right ', 'left ', 'right ', 'b ', 'a ']
+    easterEgg: ['go up', 'go up', 'go down', 'go down', 'left ', 'right ', 'left ', 'right ', 'b ', 'a '],
+    seperator: '..'
 }
 
 var variables = {
@@ -113,7 +114,7 @@ class Game {
         if(command.silent)
             Game.unmute();
         Game.checkEasterEgg();
-        Game.updateInventory();
+        Game.updateHUD();
     }
 
     static checkEasterEgg() {
@@ -126,8 +127,9 @@ class Game {
         }
     }
 
-    static updateInventory() {
+    static updateHUD() {
         ( < HTMLParagraphElement > document.getElementById("inventory")).innerHTML = "<b>Inventory :</b> " + player.toStringInventory();
+        ( < HTMLParagraphElement > document.getElementById("health")).innerHTML = "<b>HP :</b> " + player.health;
     }
 
     // Send the gameStep to the screen
@@ -156,6 +158,15 @@ function has(array, element) {
     return array && (array.indexOf(element) > -1);
 }
 
+// to remove an element from an array
+function remove(array, element) {
+    // remove if exist
+    if(has(array, element))
+    {
+        var index = array.indexOf(element);
+        array.splice(index, 1);        
+    }
+}
 
 class Command {
     static commands = {
@@ -243,7 +254,7 @@ class Command {
             desc: 'Combination of inventory and look',
             execute: (command: Command) => {
                 player.printInventory();
-                Game.print('..');
+                Game.print(constants.seperator);
                 Room.roomList[player.location].describe();
 
             }
@@ -396,10 +407,87 @@ class Unique {
     public desc: string;
 }
 
+class Take {
+    description:string;
+    able:boolean;
+    noremove:boolean;    
+    needs:Array<Reward>;
+    amount:number;
+    constructor(name) {
+        this.able = false;
+        this.noremove = false;
+        this.needs = [];
+        this.amount = 1;
+        this.description = 'Cannot take ' + name; 
+    }
+
+    public needsArray() {
+        return this.needs.map((x)=>{
+            return x.key;
+        });
+    }
+
+    public moreThanOne() {
+        return this.amount > 1;
+    }
+
+    public takeOne() {
+        this.amount -= 1;
+    }
+
+    public cannotTake(identifier) {
+        for (var reward of this.needs)
+        {
+            if(reward.is(identifier))
+            {   
+                reward.giveReward();
+                return;
+            }
+        }
+    }
+}
+
+class Reward {
+    public key:string;
+    public description;
+    public interactible:Array<string>;
+    public health:number;
+    constructor(rewardObject)
+    {
+        if(rewardObject.key)
+            this.key = rewardObject.key;
+
+        if(rewardObject.description)
+            this.description = rewardObject.description;
+
+        if(rewardObject.interactible)
+            this.interactible = rewardObject.interactible;
+        else
+            this.interactible = [];
+        
+        if(rewardObject.health)
+            this.health = rewardObject.health;
+        else
+            this.health = 0;
+    }
+
+    public is(key:string) {
+        return this.key==key;
+    }
+
+    public giveReward(){
+        Game.print(this.description);
+        for(var x of this.interactible)
+            player.addToInventory(x);
+        player.changeHealth(this.health);
+    }
+}
+
 class Interactible {
     public shortDescription: string;
     public description: string;
-    public take;
+    public take:Take;
+    // public amount;
     static interactibleListObject = {
         platinumKey: {
             shortDescription: 'platinum key',
@@ -408,13 +496,83 @@ class Interactible {
                 description: 'You bend down and pick up the platinum key. You examine it for a second and slip it in your pocket.',
                 able: true,
             },
+        },
+        water: {
+            shortDescription: 'water',
+            description: 'Crystal clear water',
+            take: {
+                description: 'Uncapping your bottle, you scoop up some fresh water into it.',
+                able: true,
+                noremove: true, 
+                needs: [{
+                    key: 'bottle',
+                    description: 'You try to cup the water in your hands, but its not very effective. You realize that you need some kind of container to store water.',
+                    interactible: ['bottle']
+                }],
+            },
+        },
+        bottle: {
+            shortDescription: 'bottle',
+            description: 'A regular old plastic bottle.',
+            take: {
+                description: 'You pick up the bottle',
+                able: true
+            }
+        },
+        copperKey: {
+            shortDescription: 'copper key',
+            description: 'A key made of copper, it has an orchid emblem enbossed on it.',
+            take: {
+                description: 'You bend down and pick up the key. You keep it in the hopes of using it later',
+                able: true,
+            },
+        },
+        copperBox: {
+            shortDescription: 'copper box',
+            description: 'A knee high box, made completely from copper. There\'s a small keyhole at the front of the box, a picutre of an orchid underneath it',
+            take: {
+                description: 'You try to lift the box, but it is too heavy.'
+            },
+            open: {
+                description: 'Fitting the key into the box, you give it a twist. It opens with a creak.',
+                needs: {
+                    copperKey: {
+                    }
+                }
+            }
         }
+        
     };
     static interactibleList = {};
 
     static reset() {
         // TODO use jquery to remove this hack
-        Interactible.interactibleList = JSON.parse(JSON.stringify(Interactible.interactibleListObject));
+        for(var key in Interactible.interactibleListObject)
+        {
+            var inter = Interactible.interactibleListObject[key];
+            var insertInter = new Interactible();
+            insertInter.description = inter.description;
+            insertInter.shortDescription = inter.shortDescription;
+            insertInter.take = new Take(insertInter.shortDescription);
+            if(inter.take){
+                if(inter.take.description)
+                    insertInter.take.description = inter.take.description;
+                if(inter.take.able)
+                    insertInter.take.able = inter.take.able;
+                if(inter.take.noremove)
+                    insertInter.take.noremove = inter.take.noremove;
+                if(inter.take.needs){
+                    for(var x of inter.take.needs)
+                        insertInter.take.needs.push(new Reward(x));
+                }
+                
+            }
+            Interactible.interactibleList[key] = (insertInter);
+        }
+    }
+
+    public takeable() {
+        return this.take && this.take.able;
     }
 
     static findOne(identifier: string) {
@@ -432,11 +590,29 @@ class Interactible {
 class Character extends Unique {
     inventory: Array < any > ;
     location: string;
+    health: number;
     constructor(name: string) {
         super();
         this.name = name;
         this.inventory = [];
         this.location = constants.startLocation;
+        this.health = 5;
+    }
+
+    public die() {
+        Game.print("You died");
+        Game.reset();
+    }
+
+    public changeHealth(health:number) {
+
+        this.health += health;
+        if(this.health<=0)
+        {
+            this.health = 0;
+            this.die();
+        }
+
     }
 
     public toStringInventory() {
@@ -459,15 +635,52 @@ class Character extends Unique {
             Game.print(Interactible.findOne(inRoom).description);
         else if (withPlayer)
             Game.print(Interactible.findOne(withPlayer).description);
+        else
+            Game.print("No " + identifier + " found");
+    }
+
+    public addToInventory(identifier: string){
+        var item:Interactible = Interactible.findOne(identifier);
+        player.inventory.push(identifier);
+        Game.print(item.shortDescription + " added to inventory.");
     }
 
     public take(identifier: string){
         var inRoom = Room.currentRoom().has(identifier);
         if(inRoom)
         {
-
+            if(player.has(inRoom))
+            {
+                Game.print("You already have " + identifier);
+                return;
+            }
+            var interactible:Interactible = Interactible.findOne(inRoom);
+            if(interactible.takeable())
+            {
+                var needArray:Array<string> = interactible.take.needsArray();
+                if(!player.hasAll(needArray)){
+                    var notHaveIdentifier = needArray[player.firstMissing(needArray)];
+                    interactible.take.cannotTake(notHaveIdentifier);
+                    return;
+                }
+                // TODO make this oop type, don't access elements
+                if(interactible.take.moreThanOne()){
+                    interactible.take.takeOne();
+                }
+                else if (interactible.take.noremove){
+                    // Don't remove item ever on take
+                }
+                else{
+                    var room:Room = Room.currentRoom();
+                    remove(room.interactible,inRoom);
+                }
+                player.addToInventory(inRoom);
+            }
+            else {
+                Game.print(interactible.take.description);
+            }
         }else{
-            Game.print("Could not find ")
+            Game.print("Could not find " + identifier + " here");
         }
     }
 
@@ -496,14 +709,20 @@ class Character extends Unique {
         return false;
     }
 
-    public hasAll(searchArray) {
+    public firstMissing(searchArray)
+    {
         if (!searchArray || searchArray.length < 1)
-            return true;
+            return -1;
         for (var key in searchArray) {
             if (!this.has(searchArray[key]))
-                return false;
+                return key;
         }
-        return true;
+        return -1;
+    
+    }
+    
+    public hasAll(searchArray) {
+        return this.firstMissing(searchArray) == -1;
     }
 
 
@@ -512,7 +731,9 @@ class Character extends Unique {
         this.location = constants.startLocation;
         this.inventory = [];
         if (constants.debug) {
-            this.inventory = ['platinumKey']
+            this.inventory = [];
+            this.location = 'westRoom';
+            // this.location = 'eastRoom';
         }
     }
 
@@ -544,7 +765,7 @@ class Room extends Unique {
 
 
     static roomListObject = {
-        'westRoom': {
+        westRoom: {
             shortDescription: 'west room',
             description: 'You are in the west end of a sloping east-west passage of barren rock.',
             interactible: ['platinumKey', 'water'],
@@ -552,22 +773,32 @@ class Room extends Unique {
                 east: {
                     to: 'centerRoom'
                 },
-                up: {
-                    to: 'westRoom',
-                    locked: 'woodenDoor'
-                },
             }
         },
-        'centerRoom': {
+        centerRoom: {
             shortDescription: 'center room',
             description: 'You are in the very heart of the dungeon, a windowless chamber lit only by the eerie light of glowing fungi high above. There is a prominent trophy stand in the middle, there is no trophy on it.',
             interactible: ['copperKey'],
             exits: {
                 west: {
                     to: 'westRoom'
+                },
+                east: {
+                    to: 'eastRoom'
                 }
             },
+        },
+        eastRoom: {
+            shortDescription: 'east room',
+            description: 'a room of finished stone with high arched ceiling and soaring columns. The room has an aura of holyness to it.',
+            interactible: ['copperBox', 'scorpion'],
+            exits: {
+                west: {
+                    to: 'centerRoom'
+                }
+            }
         }
+
     }
     static roomList = {};
 
@@ -636,7 +867,19 @@ class Room extends Unique {
     public describe() {
         Game.print(this.shortDescription);
         Game.print(this.description);
+        // print interactibles in the room
+        if(this.interactible.length > 0)
+            Game.print(constants.seperator);
+        for(var element of this.interactible)
+        {
+            var interactible:Interactible = Interactible.findOne(element);
+            if(interactible){
+                Game.print("There is " + interactible.shortDescription + " here.");
+            }
+        }
         // print exits
+        if(this.exits != {})
+            Game.print(constants.seperator);
         var exitArray = Object.keys(this.exits)
         var exitString = exitArray.join(', ');
         if (exitArray.length > 1) {
