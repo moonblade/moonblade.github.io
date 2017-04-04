@@ -8,7 +8,8 @@ var constants = {
     noExit: 'There is no exit in that direction',
     debug: true,
     easterEgg: ['go up', 'go up', 'go down', 'go down', 'left ', 'right ', 'left ', 'right ', 'b ', 'a '],
-    seperator: '..'
+    seperator: '..',
+    maxHP: 5
 }
 
 var variables = {
@@ -55,7 +56,6 @@ class Game {
             Game.reset();
             Game.clear();
             Game.mute();
-            // TODO load game
             for (let com of Game.savedGame[command.object]) {
                 // Execute each of those commands
                 Game.execute(new Command(com));
@@ -129,7 +129,7 @@ class Game {
 
     static updateHUD() {
         ( < HTMLParagraphElement > document.getElementById("inventory")).innerHTML = "<b>Inventory :</b> " + player.toStringInventory();
-        ( < HTMLParagraphElement > document.getElementById("health")).innerHTML = "<b>HP :</b> " + player.health;
+        ( < HTMLParagraphElement > document.getElementById("health")).innerHTML = "<b>HP :</b> " + player.health + "/" + constants.maxHP;
     }
 
     // Send the gameStep to the screen
@@ -237,6 +237,9 @@ class Command {
             alternatives: ['unlock'],
             extra: '[object]',
             missedExtra: 'Please specify what to open',
+            execute: (command:Command) => {
+                player.open(command.object);
+            }
         },
         'attack': {
             desc: 'Try to kill the enemy',
@@ -418,7 +421,7 @@ class Take {
         this.noremove = false;
         this.needs = [];
         this.amount = 1;
-        this.description = 'Cannot take ' + name; 
+        this.description = 'You pick up ' + name; 
     }
 
     public needsArray() {
@@ -447,6 +450,39 @@ class Take {
     }
 }
 
+class Open {
+    description:string;
+    able:boolean;
+    noremove:boolean;    
+    needs:Array<Reward>;
+    content:Array<Reward>;
+    constructor(name) {
+        this.able = false;
+        this.noremove = false;
+        this.needs = [];
+        this.description = 'You opened ' + name; 
+        this.content = []; 
+    }
+
+    public needsArray() {
+        return this.needs.map((x)=>{
+            return x.key;
+        });
+    }
+
+    public cannotOpen(identifier) {
+        for (var reward of this.needs)
+        {
+            if(reward.is(identifier))
+            {   
+                reward.giveReward();
+                return;
+            }
+        }
+    }
+    
+}
+
 class Reward {
     public key:string;
     public description;
@@ -472,7 +508,7 @@ class Reward {
     }
 
     public is(key:string) {
-        return this.key==key;
+        return !this.key || this.key==key;
     }
 
     public giveReward(){
@@ -487,6 +523,7 @@ class Interactible {
     public shortDescription: string;
     public description: string;
     public take:Take;
+    public open:Open;
     // public amount;
     static interactibleListObject = {
         platinumKey: {
@@ -507,7 +544,6 @@ class Interactible {
                 needs: [{
                     key: 'bottle',
                     description: 'You try to cup the water in your hands, but its not very effective. You realize that you need some kind of container to store water.',
-                    interactible: ['bottle']
                 }],
             },
         },
@@ -529,18 +565,32 @@ class Interactible {
         },
         copperBox: {
             shortDescription: 'copper box',
-            description: 'A knee high box, made completely from copper. There\'s a small keyhole at the front of the box, a picutre of an orchid underneath it',
+            description: 'A knee high box, made completely from copper. There\'s a small keyhole at the front of the box, a small engraving of a rose underneath it',
             take: {
-                description: 'You try to lift the box, but it is too heavy.'
+                description: 'You try to lift the box, but it is too heavy.',
             },
             open: {
                 description: 'Fitting the key into the box, you give it a twist. It opens with a creak.',
-                needs: {
-                    copperKey: {
-                    }
-                }
+                able:true,
+                content: [{
+                    description: 'You find a silver key inside the box. You slip it in your pocket for later use.',
+                    interactible: ['silverKey'],
+                }],
+                needs: [{
+                    key: 'platinumKey',
+                    description: 'You try to force the lock open, but its too strong.'
+                }]
             }
-        }
+        },
+        silverKey: {
+            shortDescription: 'silver key',
+            description: 'A key made out of pure silver. It glistens when you turn it in your hands. A small tulip design is embossed on it.',
+            take: {
+                description: 'You take the silver key, and place it in your pocket for later use.',
+                able: true
+            },
+        },
+
         
     };
     static interactibleList = {};
@@ -561,18 +611,40 @@ class Interactible {
                     insertInter.take.able = inter.take.able;
                 if(inter.take.noremove)
                     insertInter.take.noremove = inter.take.noremove;
+                if(inter.take.amount)
+                    insertInter.take.amount = inter.take.amount;
                 if(inter.take.needs){
                     for(var x of inter.take.needs)
                         insertInter.take.needs.push(new Reward(x));
                 }
-                
             }
+            
+            insertInter.open = new Open(insertInter.shortDescription);
+            if(inter.open){
+                if(inter.open.description)
+                    insertInter.open.description = inter.open.description;
+                if(inter.open.able)
+                    insertInter.open.able = inter.open.able;
+                if(inter.open.noremove)
+                    insertInter.open.noremove = inter.open.noremove;
+                if(inter.open.content)
+                    insertInter.open.content = inter.open.content;
+                if(inter.open.needs){
+                    for(var x of inter.open.needs)
+                        insertInter.open.needs.push(new Reward(x));
+                }
+            }
+
             Interactible.interactibleList[key] = (insertInter);
         }
     }
 
     public takeable() {
         return this.take && this.take.able;
+    }
+
+    public openable() {
+        return this.open && this.open.able;
     }
 
     static findOne(identifier: string) {
@@ -596,11 +668,12 @@ class Character extends Unique {
         this.name = name;
         this.inventory = [];
         this.location = constants.startLocation;
-        this.health = 5;
+        this.health = constants.maxHP;
     }
 
     public die() {
         Game.print("You died");
+        Game.print("Game Reset");
         Game.reset();
     }
 
@@ -612,6 +685,8 @@ class Character extends Unique {
             this.health = 0;
             this.die();
         }
+        if(this.health>constants.maxHP)
+            this.health = constants.maxHP;
 
     }
 
@@ -663,7 +738,6 @@ class Character extends Unique {
                     interactible.take.cannotTake(notHaveIdentifier);
                     return;
                 }
-                // TODO make this oop type, don't access elements
                 if(interactible.take.moreThanOne()){
                     interactible.take.takeOne();
                 }
@@ -672,8 +746,9 @@ class Character extends Unique {
                 }
                 else{
                     var room:Room = Room.currentRoom();
-                    remove(room.interactible,inRoom);
+                    room.remove(inRoom);
                 }
+                Game.print(interactible.take.description);
                 player.addToInventory(inRoom);
             }
             else {
@@ -684,11 +759,53 @@ class Character extends Unique {
         }
     }
 
+    public removeFromInventory(identifier:string) {
+        if(Interactible.findOne(identifier))
+            remove(this.inventory,identifier);
+    }
+
+    public open(identifier: string){
+        var inRoom = Room.currentRoom().has(identifier);
+        if(inRoom)
+        {
+            var interactible:Interactible = Interactible.findOne(inRoom);
+            if(interactible.openable())
+            {
+                var needArray:Array<string> = interactible.open.needsArray();
+                if(!player.hasAll(needArray)){
+                    var notHaveIdentifier = needArray[player.firstMissing(needArray)];
+                    interactible.open.cannotOpen(notHaveIdentifier);
+                    return;
+                }
+                if (interactible.open.noremove){
+                    // Don't remove item ever on open
+                }
+                else{
+                    var room:Room = Room.currentRoom();
+                    room.remove(inRoom);
+
+                    for(var item of needArray)
+                        this.removeFromInventory(item);
+                }
+                Game.print(interactible.open.description);
+                for(var rewardObject of interactible.open.content)
+                {
+                    var reward:Reward = new Reward(rewardObject);
+                    reward.giveReward();
+                }
+            }
+            else {
+                Game.print(interactible.open.description);
+            }
+        }else{
+            Game.print("Could not find " + identifier + " here");
+        }
+    }
+
     public printInventory() {
         if (!this.inventoryEmpty()) {
             Game.print("You are carrying: ");
             for (var item of this.inventory) {
-                // TODO Change to description of item
                 var interactible: Interactible = Interactible.findOne(item);
                 Game.print(interactible.shortDescription);
             }
@@ -702,6 +819,8 @@ class Character extends Unique {
         if (searchItem in this.inventory)
             return searchItem;
         for (let item of this.inventory) {
+            if (item == searchItem)
+                return item;
             var interactible: Interactible = Interactible.findOne(item);
             if (has(interactible.shortDescription, searchItem))
                 return item;
@@ -730,10 +849,11 @@ class Character extends Unique {
     public reset() {
         this.location = constants.startLocation;
         this.inventory = [];
+        this.health = constants.maxHP;
         if (constants.debug) {
-            this.inventory = [];
-            this.location = 'westRoom';
-            // this.location = 'eastRoom';
+            this.inventory = ['copperKey', 'bottle'];
+            // this.location = 'westRoom';
+            this.location = 'eastRoom';
         }
     }
 
@@ -791,7 +911,7 @@ class Room extends Unique {
         eastRoom: {
             shortDescription: 'east room',
             description: 'a room of finished stone with high arched ceiling and soaring columns. The room has an aura of holyness to it.',
-            interactible: ['copperBox', 'scorpion'],
+            interactible: ['copperBox'],
             exits: {
                 west: {
                     to: 'centerRoom'
@@ -804,6 +924,10 @@ class Room extends Unique {
 
     static currentRoom() {
         return Room.findOne(player.location);
+    }
+
+    public remove(item:string) {
+        remove(this.interactible,item);
     }
 
     static findOne(roomName: string) {
