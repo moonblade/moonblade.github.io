@@ -34,11 +34,12 @@ function debug(string) {
 var Game = (function () {
     function Game() {
     }
-    // static commandHistory:Array<Command> = [];
     Game.print = function (string) {
         if (variables.mute)
             return;
         // Save till endMarker, when endMarker comes, print it on screen
+        if (constants.debug)
+            debug("print: " + string);
         if (string == constants.endMarker) {
             variables.gameText = variables.gameStepText.concat(variables.gameText);
             Game.updateGameScreen();
@@ -274,7 +275,7 @@ Command.commands = {
     'examine': {
         desc: 'Give description of the item',
         extra: '[item]',
-        alternatives: ['ex'],
+        alternatives: ['ex', 'describe', 'desc'],
         missedExtra: 'Please specify what to examine',
         execute: function (command) {
             player.examine(command.object);
@@ -327,11 +328,14 @@ Command.commands = {
             player.open(command.object);
         }
     },
-    'attack': {
+    'kill': {
         desc: 'Try to kill the enemy',
-        alternatives: ['kill'],
+        alternatives: ['attack'],
         extra: '[enemy]',
         missedExtra: 'Please specify what to attack',
+        execute: function (command) {
+            player.kill(command.object);
+        }
     },
     'make': {
         desc: 'Make object if the materials are present',
@@ -395,88 +399,276 @@ var Unique = (function () {
     return Unique;
 }());
 Unique.ids = [];
-var Take = (function () {
-    function Take(name) {
-        this.able = false;
+// Super of take, open, make classes
+var Interaction = (function () {
+    function Interaction(interactionObject, name) {
+        this.canString = this.able ? '' : 'cannot ';
+        this.name = name;
         this.noremove = false;
+        this.able = false;
         this.needs = [];
-        this.amount = 1;
-        this.description = 'You pick up ' + name;
+        this.description = 'You ' + this.canString + 'interact with ' + name;
+        if (interactionObject) {
+            if (interactionObject.description)
+                this.description = interactionObject.description;
+            if (interactionObject.able)
+                this.able = interactionObject.able;
+            if (interactionObject.noremove)
+                this.noremove = interactionObject.noremove;
+            if (interactionObject.needs) {
+                for (var _i = 0, _a = interactionObject.needs; _i < _a.length; _i++) {
+                    var x = _a[_i];
+                    this.needs.push(new Reward(x));
+                }
+            }
+        }
     }
-    Take.prototype.needsArray = function () {
-        return this.needs.map(function (x) {
-            return x.key;
-        });
+    Interaction.prototype.satisfiedAll = function () {
+        for (var _i = 0, _a = this.needs; _i < _a.length; _i++) {
+            var reward = _a[_i];
+            if (!reward.satisfied()) {
+                reward.giveReward();
+                return false;
+            }
+        }
+        return true;
+    };
+    Interaction.prototype.satisfiedOne = function () {
+        for (var _i = 0, _a = this.needs; _i < _a.length; _i++) {
+            var reward = _a[_i];
+            if (reward.satisfied()) {
+                return reward;
+            }
+        }
+        return false;
+    };
+    Interaction.prototype.removeRequirements = function () {
+        for (var _i = 0, _a = this.needs; _i < _a.length; _i++) {
+            var reward = _a[_i];
+            reward.remove();
+        }
+    };
+    return Interaction;
+}());
+var Take = (function (_super) {
+    __extends(Take, _super);
+    function Take(takeObject, name) {
+        var _this = _super.call(this, takeObject, name) || this;
+        _this.amount = 1;
+        _this.description = 'You ' + _this.canString + 'pick up ' + name;
+        if (takeObject) {
+            if (takeObject.description)
+                _this.description = takeObject.description;
+            if (takeObject.amount)
+                _this.amount = takeObject.amount;
+        }
+        return _this;
+    }
+    Take.prototype.takeOne = function () {
+        this.amount -= 1;
     };
     Take.prototype.moreThanOne = function () {
         return this.amount > 1;
     };
-    Take.prototype.takeOne = function () {
-        this.amount -= 1;
-    };
-    Take.prototype.cannotTake = function (identifier) {
-        for (var _i = 0, _a = this.needs; _i < _a.length; _i++) {
-            var reward = _a[_i];
-            if (reward.is(identifier)) {
-                reward.giveReward();
-                return;
-            }
+    Take.prototype.take = function (inRoom) {
+        if (this.moreThanOne()) {
+            this.takeOne();
         }
+        else if (this.noremove) {
+            // Don't remove item ever on take
+        }
+        else {
+            var room = Room.currentRoom();
+            room.remove(inRoom);
+        }
+        Game.print(this.description);
+        player.addToInventory(inRoom);
     };
     return Take;
-}());
-var Open = (function () {
-    function Open(name) {
-        this.able = false;
-        this.noremove = false;
-        this.needs = [];
-        this.description = 'You opened ' + name;
-        this.content = [];
+}(Interaction));
+var Open = (function (_super) {
+    __extends(Open, _super);
+    function Open(openObject, name) {
+        var _this = _super.call(this, openObject, name) || this;
+        _this.description = 'You ' + _this.canString + 'open ' + name;
+        _this.content = [];
+        if (openObject) {
+            if (openObject.description)
+                _this.description = openObject.description;
+            if (openObject.content)
+                for (var _i = 0, _a = openObject.content; _i < _a.length; _i++) {
+                    var x = _a[_i];
+                    _this.content.push(new Reward(x));
+                }
+        }
+        return _this;
     }
-    Open.prototype.needsArray = function () {
-        return this.needs.map(function (x) {
-            return x.key;
-        });
-    };
-    Open.prototype.cannotOpen = function (identifier) {
-        for (var _i = 0, _a = this.needs; _i < _a.length; _i++) {
+    Open.prototype.getContent = function () {
+        for (var _i = 0, _a = this.content; _i < _a.length; _i++) {
             var reward = _a[_i];
-            if (reward.is(identifier)) {
-                reward.giveReward();
+            reward.giveReward();
+        }
+    };
+    Open.prototype.open = function (inRoom) {
+        if (this.noremove) {
+            // Don't remove item ever on open
+        }
+        else {
+            var room = Room.currentRoom();
+            room.remove(inRoom);
+            this.removeRequirements();
+        }
+        Game.print(this.description);
+        this.getContent();
+    };
+    return Open;
+}(Interaction));
+var Kill = (function (_super) {
+    __extends(Kill, _super);
+    function Kill(openObject, name) {
+        var _this = _super.call(this, openObject, name) || this;
+        _this.description = 'You ' + _this.canString + 'kill ' + name;
+        _this.loot = [];
+        _this.removeWeakness = false;
+        _this.health = 1;
+        _this.health = 1;
+        _this.weakness = [];
+        if (openObject) {
+            if (openObject.description)
+                _this.description = openObject.description;
+            if (openObject.removeWeakness)
+                _this.removeWeakness = openObject.removeWeakness;
+            if (openObject.health) {
+                _this.health = openObject.health;
+                _this.maxHealth = openObject.health;
+            }
+            if (openObject.loot)
+                for (var _i = 0, _a = openObject.loot; _i < _a.length; _i++) {
+                    var x = _a[_i];
+                    _this.loot.push(new Reward(x));
+                }
+            if (openObject.weakness)
+                for (var _b = 0, _c = openObject.weakness; _b < _c.length; _b++) {
+                    var x = _c[_b];
+                    _this.weakness.push(new Weakness(x));
+                }
+        }
+        return _this;
+    }
+    Kill.prototype.getLoot = function () {
+        for (var _i = 0, _a = this.loot; _i < _a.length; _i++) {
+            var reward = _a[_i];
+            reward.giveReward();
+        }
+    };
+    Kill.prototype.updateHealth = function (health) {
+        this.health += health;
+        if (this.health <= 0) {
+            Game.print('You defeated the ' + this.name);
+        }
+    };
+    Kill.prototype.kill = function (inRoom) {
+        var room = Room.currentRoom();
+        for (var _i = 0, _a = this.weakness; _i < _a.length; _i++) {
+            var x = _a[_i];
+            if (x.canUse()) {
+                x.exploitWeakness(inRoom);
                 return;
             }
         }
+        for (var _b = 0, _c = this.weakness; _b < _c.length; _b++) {
+            var x = _c[_b];
+            if (x.has()) {
+                x.exploitWeakness(inRoom);
+                return;
+            }
+        }
+        // TODO print nothing statement
     };
-    return Open;
-}());
+    return Kill;
+}(Interaction));
+var To;
+(function (To) {
+    To[To["room"] = 1] = "room";
+    To[To["player"] = 2] = "player";
+})(To || (To = {}));
 var Reward = (function () {
     function Reward(rewardObject) {
         if (rewardObject.key)
             this.key = rewardObject.key;
+        if (rewardObject.room)
+            this.room = rewardObject.room;
         if (rewardObject.description)
             this.description = rewardObject.description;
         if (rewardObject.interactible)
             this.interactible = rewardObject.interactible;
         else
             this.interactible = [];
+        if (rewardObject.to != undefined)
+            this.to = rewardObject.to;
+        else
+            this.to = To.player;
         if (rewardObject.health)
             this.health = rewardObject.health;
         else
             this.health = 0;
     }
-    Reward.prototype.is = function (key) {
-        return !this.key || this.key == key;
+    Reward.prototype.remove = function () {
+        player.removeFromInventory(this.key);
+    };
+    Reward.prototype.satisfied = function () {
+        if (!this.key && !this.room)
+            return true;
+        return player.has(this.key) || Room.currentRoom().is(this.room);
     };
     Reward.prototype.giveReward = function () {
         Game.print(this.description);
         for (var _i = 0, _a = this.interactible; _i < _a.length; _i++) {
             var x = _a[_i];
-            player.addToInventory(x);
+            if (this.to == To.player)
+                player.addToInventory(x);
+            else
+                Room.currentRoom().add(x);
         }
-        player.changeHealth(this.health);
+        player.updateHealth(this.health);
     };
     return Reward;
 }());
+var Weakness = (function (_super) {
+    __extends(Weakness, _super);
+    function Weakness(weaknessObject) {
+        var _this = _super.call(this, weaknessObject) || this;
+        _this.isWeakness = true;
+        _this.attack = 1;
+        _this.weaknessDescription = 'The same trick won\' work twice';
+        if (weaknessObject.isWeakness)
+            _this.isWeakness = weaknessObject.isWeakness;
+        if (weaknessObject.attack)
+            _this.attack = weaknessObject.attack;
+        if (weaknessObject.weaknessDescription)
+            _this.weaknessDescription = weaknessObject.weaknessDescription;
+        return _this;
+    }
+    Weakness.prototype.has = function () {
+        return player.has(this.key);
+    };
+    Weakness.prototype.canUse = function () {
+        return player.has(this.key) && this.isWeakness;
+    };
+    Weakness.prototype.exploitWeakness = function (identifier) {
+        // TODO complete this
+        var enemy = Interactible.findOne(identifier);
+        if (this.canUse()) {
+            Game.print(this.description);
+            enemy.kill.updateHealth(this.attack);
+        }
+        else {
+            Game.print(this.weaknessDescription);
+            player.updateHealth(this.health);
+        }
+    };
+    return Weakness;
+}(Reward));
 var Interactible = (function () {
     function Interactible() {
     }
@@ -487,40 +679,9 @@ var Interactible = (function () {
             var insertInter = new Interactible();
             insertInter.description = inter.description;
             insertInter.shortDescription = inter.shortDescription;
-            insertInter.take = new Take(insertInter.shortDescription);
-            if (inter.take) {
-                if (inter.take.description)
-                    insertInter.take.description = inter.take.description;
-                if (inter.take.able)
-                    insertInter.take.able = inter.take.able;
-                if (inter.take.noremove)
-                    insertInter.take.noremove = inter.take.noremove;
-                if (inter.take.amount)
-                    insertInter.take.amount = inter.take.amount;
-                if (inter.take.needs) {
-                    for (var _i = 0, _a = inter.take.needs; _i < _a.length; _i++) {
-                        var x = _a[_i];
-                        insertInter.take.needs.push(new Reward(x));
-                    }
-                }
-            }
-            insertInter.open = new Open(insertInter.shortDescription);
-            if (inter.open) {
-                if (inter.open.description)
-                    insertInter.open.description = inter.open.description;
-                if (inter.open.able)
-                    insertInter.open.able = inter.open.able;
-                if (inter.open.noremove)
-                    insertInter.open.noremove = inter.open.noremove;
-                if (inter.open.content)
-                    insertInter.open.content = inter.open.content;
-                if (inter.open.needs) {
-                    for (var _b = 0, _c = inter.open.needs; _b < _c.length; _b++) {
-                        var x = _c[_b];
-                        insertInter.open.needs.push(new Reward(x));
-                    }
-                }
-            }
+            insertInter.take = new Take(inter.take, inter.shortDescription);
+            insertInter.open = new Open(inter.open, inter.shortDescription);
+            insertInter.kill = new Kill(inter.kill, inter.shortDescription);
             Interactible.interactibleList[key] = (insertInter);
         }
     };
@@ -529,6 +690,19 @@ var Interactible = (function () {
     };
     Interactible.prototype.openable = function () {
         return this.open && this.open.able;
+    };
+    Interactible.prototype.killable = function () {
+        return this.kill && this.kill.able;
+    };
+    Interactible.findKey = function (identifier) {
+        if (identifier in Interactible.interactibleList) {
+            return identifier;
+        }
+        for (var key in Interactible.interactibleList) {
+            var inter = Interactible.interactibleList[key];
+            if (has(inter.shortDescription, identifier))
+                return key;
+        }
     };
     Interactible.findOne = function (identifier) {
         if (identifier in Interactible.interactibleList) {
@@ -608,6 +782,34 @@ Interactible.interactibleListObject = {
             able: true
         },
     },
+    scorpion: {
+        shortDescription: 'scorpion',
+        description: 'A menacing scorpion with its stinger raised, poised to strike.',
+        kill: {
+            description: '',
+            able: true,
+            removeWeakness: true,
+            health: 1,
+            needs: [{
+                    key: 'sword',
+                    description: 'The scorpion strikes, you try to sidestep it and catch its tail with your bare hands, but it is faster than you and strikes you squre in your heart',
+                    health: -1,
+                }],
+            weakness: [{
+                    key: 'sword',
+                    description: 'The scorpion strikes, you sidestep the attack and drive your sword through it. It thrashes around for sometime, and finally dies.',
+                    health: -1,
+                    attack: -1,
+                    isWeakness: true,
+                    weaknessDescription: 'You take a swing at the scorpion with the sword, but the wily creature sidesteps you',
+                }],
+            loot: [],
+        }
+    },
+    sword: {
+        shortDescription: 'sword',
+        description: 'A glistening sword made with pure steel. You can see a small ruby set on its hilt.',
+    }
 };
 Interactible.interactibleList = {};
 var Character = (function (_super) {
@@ -625,7 +827,7 @@ var Character = (function (_super) {
         Game.print("Game Reset");
         Game.reset();
     };
-    Character.prototype.changeHealth = function (health) {
+    Character.prototype.updateHealth = function (health) {
         this.health += health;
         if (this.health <= 0) {
             this.health = 0;
@@ -661,6 +863,7 @@ var Character = (function (_super) {
         player.inventory.push(identifier);
         Game.print(item.shortDescription + " added to inventory.");
     };
+    // Try to take the object
     Character.prototype.take = function (identifier) {
         var inRoom = Room.currentRoom().has(identifier);
         if (inRoom) {
@@ -670,24 +873,9 @@ var Character = (function (_super) {
             }
             var interactible = Interactible.findOne(inRoom);
             if (interactible.takeable()) {
-                var needArray = interactible.take.needsArray();
-                if (!player.hasAll(needArray)) {
-                    var notHaveIdentifier = needArray[player.firstMissing(needArray)];
-                    interactible.take.cannotTake(notHaveIdentifier);
+                if (!interactible.take.satisfiedAll())
                     return;
-                }
-                if (interactible.take.moreThanOne()) {
-                    interactible.take.takeOne();
-                }
-                else if (interactible.take.noremove) {
-                    // Don't remove item ever on take
-                }
-                else {
-                    var room = Room.currentRoom();
-                    room.remove(inRoom);
-                }
-                Game.print(interactible.take.description);
-                player.addToInventory(inRoom);
+                interactible.take.take(inRoom);
             }
             else {
                 Game.print(interactible.take.description);
@@ -701,37 +889,36 @@ var Character = (function (_super) {
         if (Interactible.findOne(identifier))
             remove(this.inventory, identifier);
     };
+    // Try to open the object
     Character.prototype.open = function (identifier) {
         var inRoom = Room.currentRoom().has(identifier);
         if (inRoom) {
             var interactible = Interactible.findOne(inRoom);
             if (interactible.openable()) {
-                var needArray = interactible.open.needsArray();
-                if (!player.hasAll(needArray)) {
-                    var notHaveIdentifier = needArray[player.firstMissing(needArray)];
-                    interactible.open.cannotOpen(notHaveIdentifier);
+                if (!interactible.open.satisfiedAll())
                     return;
-                }
-                if (interactible.open.noremove) {
-                    // Don't remove item ever on open
-                }
-                else {
-                    var room = Room.currentRoom();
-                    room.remove(inRoom);
-                    for (var _i = 0, needArray_1 = needArray; _i < needArray_1.length; _i++) {
-                        var item = needArray_1[_i];
-                        this.removeFromInventory(item);
-                    }
-                }
-                Game.print(interactible.open.description);
-                for (var _a = 0, _b = interactible.open.content; _a < _b.length; _a++) {
-                    var rewardObject = _b[_a];
-                    var reward = new Reward(rewardObject);
-                    reward.giveReward();
-                }
+                interactible.open.open(inRoom);
             }
             else {
                 Game.print(interactible.open.description);
+            }
+        }
+        else {
+            Game.print("Could not find " + identifier + " here");
+        }
+    };
+    // Try to kill the object
+    Character.prototype.kill = function (identifier) {
+        var inRoom = Room.currentRoom().has(identifier);
+        if (inRoom) {
+            var interactible = Interactible.findOne(inRoom);
+            if (interactible.killable()) {
+                if (!interactible.kill.satisfiedAll())
+                    return;
+                interactible.kill.kill(inRoom);
+            }
+            else {
+                Game.print(interactible.kill.description);
             }
         }
         else {
@@ -781,7 +968,7 @@ var Character = (function (_super) {
         this.inventory = [];
         this.health = constants.maxHP;
         if (constants.debug) {
-            this.inventory = ['copperKey', 'bottle'];
+            this.inventory = ['platinumKey', 'bottle'];
             // this.location = 'westRoom';
             this.location = 'eastRoom';
         }
@@ -820,7 +1007,16 @@ var Room = (function (_super) {
         return Room.findOne(player.location);
     };
     Room.prototype.remove = function (item) {
-        remove(this.interactible, item);
+        if (item in this.interactible)
+            remove(this.interactible, item);
+        else {
+            var interactible = Interactible.findKey(item);
+            remove(this.interactible, interactible);
+        }
+    };
+    Room.prototype.add = function (item) {
+        if (Interactible.findOne(item))
+            this.interactible.push(item);
     };
     Room.findOne = function (roomName) {
         if (roomName in Room.roomList) {
@@ -873,6 +1069,10 @@ var Room = (function (_super) {
                 Room.roomList[key].exits[exitKey] = roomExit;
             }
         }
+    };
+    Room.prototype.is = function (name) {
+        // TODO check if this works
+        return this.name == name || has(this.shortDescription, name);
     };
     Room.prototype.describe = function () {
         Game.print(this.shortDescription);
@@ -935,7 +1135,7 @@ Room.roomListObject = {
     eastRoom: {
         shortDescription: 'east room',
         description: 'a room of finished stone with high arched ceiling and soaring columns. The room has an aura of holyness to it.',
-        interactible: ['copperBox'],
+        interactible: ['copperBox', 'scorpion'],
         exits: {
             west: {
                 to: 'centerRoom'
