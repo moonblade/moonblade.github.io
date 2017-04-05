@@ -533,11 +533,14 @@ var Kill = (function (_super) {
         _this.health = 1;
         _this.health = 1;
         _this.weakness = [];
+        _this.loss = new Reward({});
         if (openObject) {
             if (openObject.description)
                 _this.description = openObject.description;
             if (openObject.removeWeakness)
                 _this.removeWeakness = openObject.removeWeakness;
+            if (openObject.loss)
+                _this.loss = new Reward(openObject.loss);
             if (openObject.health) {
                 _this.health = openObject.health;
                 _this.maxHealth = openObject.health;
@@ -561,10 +564,12 @@ var Kill = (function (_super) {
             reward.giveReward();
         }
     };
-    Kill.prototype.updateHealth = function (health) {
+    Kill.prototype.updateHealth = function (health, identifier) {
         this.health += health;
         if (this.health <= 0) {
             Game.print('You defeated the ' + this.name);
+            this.getLoot();
+            Room.currentRoom().remove(identifier);
         }
     };
     Kill.prototype.kill = function (inRoom) {
@@ -583,7 +588,7 @@ var Kill = (function (_super) {
                 return;
             }
         }
-        // TODO print nothing statement
+        this.loss.giveReward();
     };
     return Kill;
 }(Interaction));
@@ -660,7 +665,10 @@ var Weakness = (function (_super) {
         var enemy = Interactible.findOne(identifier);
         if (this.canUse()) {
             Game.print(this.description);
-            enemy.kill.updateHealth(this.attack);
+            enemy.kill.updateHealth(this.attack, identifier);
+            if (enemy.kill.removeWeakness) {
+                this.isWeakness = false;
+            }
         }
         else {
             Game.print(this.weaknessDescription);
@@ -786,29 +794,34 @@ Interactible.interactibleListObject = {
         shortDescription: 'scorpion',
         description: 'A menacing scorpion with its stinger raised, poised to strike.',
         kill: {
-            description: '',
             able: true,
             removeWeakness: true,
             health: 1,
-            needs: [{
-                    key: 'sword',
-                    description: 'The scorpion strikes, you try to sidestep it and catch its tail with your bare hands, but it is faster than you and strikes you squre in your heart',
-                    health: -1,
-                }],
             weakness: [{
                     key: 'sword',
-                    description: 'The scorpion strikes, you sidestep the attack and drive your sword through it. It thrashes around for sometime, and finally dies.',
+                    description: 'The scorpion strikes, you sidestep the attack and drive your sword through it. It thrashes around for sometime and finally dies.',
                     health: -1,
                     attack: -1,
                     isWeakness: true,
                     weaknessDescription: 'You take a swing at the scorpion with the sword, but the wily creature sidesteps you',
                 }],
-            loot: [],
+            loot: [{
+                    description: 'From the hole in its stomach, a key falls to the floor, intrigued you take it.',
+                    interactible: ['graniteKey'],
+                }],
+            loss: {
+                description: 'The scorpion strikes, you try to sidestep it and catch its tail with your bare hands, but it is faster than you and strikes you square in your heart',
+                health: -1,
+            },
         }
     },
     sword: {
         shortDescription: 'sword',
         description: 'A glistening sword made with pure steel. You can see a small ruby set on its hilt.',
+    },
+    graniteKey: {
+        shortDescription: 'granite key',
+        description: 'A key fashioned from granite, it must have been incredibly difficult to craft.'
     }
 };
 Interactible.interactibleList = {};
@@ -968,8 +981,7 @@ var Character = (function (_super) {
         this.inventory = [];
         this.health = constants.maxHP;
         if (constants.debug) {
-            this.inventory = ['platinumKey', 'bottle'];
-            // this.location = 'westRoom';
+            this.inventory = ['platinumKey', 'sword'];
             this.location = 'eastRoom';
         }
     };
@@ -1056,18 +1068,14 @@ var Room = (function (_super) {
             room.shortDescription = Room.roomListObject[key].shortDescription;
             room.description = Room.roomListObject[key].description;
             room.interactible = Room.roomListObject[key].interactible;
-            Room.roomList[key] = room;
-        }
-        // Make exits
-        for (var key in Room.roomListObject) {
             for (var exitKey in Room.roomListObject[key].exits) {
                 var exit = Room.roomListObject[key].exits[exitKey];
                 var roomExit = {};
                 roomExit['to'] = exit.to;
-                roomExit['toRoom'] = Room.findOne(exit.to);
                 roomExit['locked'] = exit.locked;
-                Room.roomList[key].exits[exitKey] = roomExit;
+                room.exits[exitKey] = roomExit;
             }
+            Room.roomList[key] = room;
         }
     };
     Room.prototype.is = function (name) {
