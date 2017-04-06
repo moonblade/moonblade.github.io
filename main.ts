@@ -87,7 +87,7 @@ var constants = {
                 treasureRoom: {
                     shortDescription: 'treasure room',
                     description: 'a room filled with treasures of all kinds imaginable, there are mounds of glittering gold and shining diamonds in a huge pile',
-                    interactible: [],
+                    interactible: ['platinumBox'],
                     exits: [{
                         direction: 'east',
                         to: 'northRoom',
@@ -184,7 +184,7 @@ var constants = {
                         description: 'You try to take the gold box, but it does not budge, you overestimate your own strength',
                     },
                     open: {
-                        description: 'Fitting the key into the lock, you give it a twist. the box falls open.',
+                        description: 'Fitting the key into the lock, you give it a twist. ',
                         able:true,
                         content: [{
                             description: 'Expecting treasure you slowly open the box, you find a normal looking key inside the box. Disappointed, you pocket it.',
@@ -193,6 +193,21 @@ var constants = {
                         needs: [{
                             key: 'goldKey',
                             description: 'You try to hit the box repeatedly in an effort to open it, nothing happens'
+                        }]
+                    }
+                },
+                platinumBox: {
+                    shortDescription: 'platinum box',
+                    description: 'A box that looks to be made from platinum, on closer inspection it is a wooden box coated in a platinum finish.',
+                    take: {
+                        description: 'You try to take the box, but its too slippery',
+                    },
+                    open: {
+                        description: 'You open the platinum box with its key.',
+                        able: true,
+                        content: [{
+                            description: 'Peering inside, you see a sparkle, excited you grab it. Its the hilt of a marvellous sword. You take the sword out of the box',
+                            interactible: ['sword']
                         }]
                     }
                 },
@@ -248,6 +263,9 @@ var constants = {
                 sword: {
                     shortDescription: 'sword',
                     description: 'A glistening sword made with pure steel. You can see a small ruby set on its hilt.',
+                    take: {
+                        able: true,
+                    }
 
                 },
                 graniteKey: {
@@ -691,6 +709,9 @@ class Interaction extends Unique{
     needs: Array < Reward > ;
     noremove: boolean;
     canString: string;
+    loss: Reward;
+        
+
     constructor(interactionObject, name) {
         super();
         this.name = name;
@@ -699,6 +720,7 @@ class Interaction extends Unique{
         this.canString = 'cannot ';
         this.needs = [];
         this.description = 'You ' + this.canString + 'interact with ' + name;
+        this.loss = new Reward({});
         if (interactionObject) {
             if (interactionObject.description)
                 this.description = interactionObject.description;
@@ -706,6 +728,8 @@ class Interaction extends Unique{
                 this.able = interactionObject.able;
             if (interactionObject.noremove)
                 this.noremove = interactionObject.noremove;
+            if (interactionObject.loss)
+                this.loss = new Reward(interactionObject.loss);
             if (interactionObject.needs) {
                 for (var x of interactionObject.needs)
                     this.needs.push(new Reward(x));
@@ -714,7 +738,9 @@ class Interaction extends Unique{
         this.canString = this.able ? '' : 'cannot ';
     }
 
-
+    public takeLoss() {
+        this.loss.giveReward();
+    }
 
     public satisfiedAll() {
         for (var reward of this.needs)
@@ -823,7 +849,6 @@ class Kill extends Interaction {
     health: number;
     maxHealth: number;
     weakness: Array < Weakness > ;
-    loss: Reward;
     constructor(openObject, name) {
         super(openObject, name);
         this.description = 'You ' + this.canString + 'kill ' + name;
@@ -832,7 +857,6 @@ class Kill extends Interaction {
         this.health = 1;
         this.health = 1;
         this.weakness = [];
-        this.loss = new Reward({});
         if (openObject) {
             if (openObject.description)
                 this.description = openObject.description;
@@ -840,9 +864,7 @@ class Kill extends Interaction {
             if (openObject.removeWeakness)
                 this.removeWeakness = openObject.removeWeakness;
 
-            if (openObject.loss)
-                this.loss = new Reward(openObject.loss);
-
+            
             if (openObject.health) {
                 this.health = openObject.health;
                 this.maxHealth = openObject.health;
@@ -887,7 +909,7 @@ class Kill extends Interaction {
                 return;
             }
         }
-        this.loss.giveReward();
+        this.takeLoss();
     }
 }
 
@@ -1239,7 +1261,7 @@ class Character extends Unique {
         this.health = constants.maxHP;
         if (constants.debug) {
             // this.inventory = ['normalKey', 'sword'];
-            this.location = 'northRoom';
+            // this.location = 'northRoom';
         }
     }
 

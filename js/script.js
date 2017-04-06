@@ -96,7 +96,7 @@ var constants = {
                 treasureRoom: {
                     shortDescription: 'treasure room',
                     description: 'a room filled with treasures of all kinds imaginable, there are mounds of glittering gold and shining diamonds in a huge pile',
-                    interactible: [],
+                    interactible: ['platinumBox'],
                     exits: [{
                             direction: 'east',
                             to: 'northRoom',
@@ -191,7 +191,7 @@ var constants = {
                         description: 'You try to take the gold box, but it does not budge, you overestimate your own strength',
                     },
                     open: {
-                        description: 'Fitting the key into the lock, you give it a twist. the box falls open.',
+                        description: 'Fitting the key into the lock, you give it a twist. ',
                         able: true,
                         content: [{
                                 description: 'Expecting treasure you slowly open the box, you find a normal looking key inside the box. Disappointed, you pocket it.',
@@ -200,6 +200,21 @@ var constants = {
                         needs: [{
                                 key: 'goldKey',
                                 description: 'You try to hit the box repeatedly in an effort to open it, nothing happens'
+                            }]
+                    }
+                },
+                platinumBox: {
+                    shortDescription: 'platinum box',
+                    description: 'A box that looks to be made from platinum, on closer inspection it is a wooden box coated in a platinum finish.',
+                    take: {
+                        description: 'You try to take the box, but its too slippery',
+                    },
+                    open: {
+                        description: 'You open the platinum box with its key.',
+                        able: true,
+                        content: [{
+                                description: 'Peering inside, you see a sparkle, excited you grab it. Its the hilt of a marvellous sword. You take the sword out of the box',
+                                interactible: ['sword']
                             }]
                     }
                 },
@@ -255,6 +270,9 @@ var constants = {
                 sword: {
                     shortDescription: 'sword',
                     description: 'A glistening sword made with pure steel. You can see a small ruby set on its hilt.',
+                    take: {
+                        able: true,
+                    }
                 },
                 graniteKey: {
                     shortDescription: 'granite key',
@@ -678,6 +696,7 @@ var Interaction = (function (_super) {
         _this.canString = 'cannot ';
         _this.needs = [];
         _this.description = 'You ' + _this.canString + 'interact with ' + name;
+        _this.loss = new Reward({});
         if (interactionObject) {
             if (interactionObject.description)
                 _this.description = interactionObject.description;
@@ -685,6 +704,8 @@ var Interaction = (function (_super) {
                 _this.able = interactionObject.able;
             if (interactionObject.noremove)
                 _this.noremove = interactionObject.noremove;
+            if (interactionObject.loss)
+                _this.loss = new Reward(interactionObject.loss);
             if (interactionObject.needs) {
                 for (var _i = 0, _a = interactionObject.needs; _i < _a.length; _i++) {
                     var x = _a[_i];
@@ -695,6 +716,9 @@ var Interaction = (function (_super) {
         _this.canString = _this.able ? '' : 'cannot ';
         return _this;
     }
+    Interaction.prototype.takeLoss = function () {
+        this.loss.giveReward();
+    };
     Interaction.prototype.satisfiedAll = function () {
         for (var _i = 0, _a = this.needs; _i < _a.length; _i++) {
             var reward = _a[_i];
@@ -810,14 +834,11 @@ var Kill = (function (_super) {
         _this.health = 1;
         _this.health = 1;
         _this.weakness = [];
-        _this.loss = new Reward({});
         if (openObject) {
             if (openObject.description)
                 _this.description = openObject.description;
             if (openObject.removeWeakness)
                 _this.removeWeakness = openObject.removeWeakness;
-            if (openObject.loss)
-                _this.loss = new Reward(openObject.loss);
             if (openObject.health) {
                 _this.health = openObject.health;
                 _this.maxHealth = openObject.health;
@@ -865,7 +886,7 @@ var Kill = (function (_super) {
                 return;
             }
         }
-        this.loss.giveReward();
+        this.takeLoss();
     };
     return Kill;
 }(Interaction));
@@ -1179,7 +1200,7 @@ var Character = (function (_super) {
         this.health = constants.maxHP;
         if (constants.debug) {
             // this.inventory = ['normalKey', 'sword'];
-            this.location = 'northRoom';
+            // this.location = 'northRoom';
         }
     };
     Character.prototype.moveTo = function (direction) {
