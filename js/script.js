@@ -275,7 +275,7 @@ var constants = {
                         description: 'You open the door lock with the normal Key, you try to push it open but it does not budge, You shove your weight on it, and it creaks and opens a bit allowing you room to pass',
                         needs: [{
                                 key: 'normalKey',
-                                description: 'You try to break the door open with a kick, but it is too strong and your legs hurt',
+                                description: 'You try to break the door open with a kick, but it is too strong and your legs hurt.',
                                 health: -1
                             }]
                     }
@@ -1022,6 +1022,11 @@ var Character = (function (_super) {
     };
     Character.prototype.updateHealth = function (health) {
         this.health += health;
+        if (health != 0) {
+            var log = health < 0 ? 'lose ' : 'gain ';
+            var logHealth = health < 0 ? -health : health;
+            Game.print('You ' + log + logHealth + ' health.');
+        }
         if (this.health <= 0) {
             this.health = 0;
             this.die();
@@ -1173,7 +1178,7 @@ var Character = (function (_super) {
         this.inventory = [];
         this.health = constants.maxHP;
         if (constants.debug) {
-            this.inventory = ['normalKey', 'sword'];
+            // this.inventory = ['normalKey', 'sword'];
             this.location = 'northRoom';
         }
     };
