@@ -1,8 +1,4 @@
 /// <reference path="js/jquery.d.ts" />
-enum To {
-    room = 1,
-        player
-}
 var constants = {
     defaultPlayerName: 'player',
     startLocation: 'westRoom',
@@ -54,7 +50,7 @@ var constants = {
                 },
                 eastRoom: {
                     shortDescription: 'east room',
-                    description: 'a room of finished stone with high arched ceiling and soaring columns. The room has an aura of holyness to it.',
+                    description: 'You arrive at a room of finished stone with high arched ceiling and soaring columns. The room has an aura of holyness to it.',
                     interactible: ['copperBox', 'scorpion'],
                     exits: [{
                         direction: 'west',
@@ -63,34 +59,52 @@ var constants = {
                 },
                 northRoom: {
                     shortDescription: 'north room',
-                    description: 'a dimly room littered with skulls. It has an eerie quiteness about it, the sound of death',
+                    description: 'You are in a dimly room littered with skulls. It has an eerie quiteness about it, the sound of death',
                     interactible: ['silverBox', 'bottle'],
                     exits: [{
                         direction: 'south',
                         to: 'centerRoom'
                     },{
-                        direction: 'west',
+                        direction: 'east',
                         to: 'treasureRoom',
                         locked: 'woodenDoor',
+                        description: 'You expect the door to be a mirage and resolve to walk through it, you walk headlong into the door and hit your face hard.'
+                    },{
+                        direction: 'west',
+                        to: 'treasureRoom',
+                        locked: 'wroughtIronDoor',
                         description: 'You expect the door to be a mirage and resolve to walk through it, you walk headlong into the door and hit your face hard.'
                     }]
                 },
                 southRoom: {
                     shortDescription: 'south room',
-                    description: 'a damp musty smelling room. A small window overlooks a cliff where faint sounds of waves crashing can be faintly heard.',
+                    description: 'You are in a damp musty smelling room. A small window overlooks a cliff where faint sounds of waves crashing can be faintly heard.',
                     interactible: ['goldBox', 'ivoryKey'],
                     exits: [{
                         direction: 'north',
                         to: 'centerRoom'
+                    },{
+                        direction: 'west',
+                        to: 'burningRoom',
+                        locked: 'marbleDoor'
                     }]
                 },
                 treasureRoom: {
                     shortDescription: 'treasure room',
-                    description: 'a room filled with treasures of all kinds imaginable, there are mounds of glittering gold and shining diamonds in a huge pile',
-                    interactible: ['platinumBox'],
+                    description: 'You are in a room filled with treasures of all kinds imaginable, there are mounds of glittering gold and shining diamonds in a huge pile',
+                    interactible: ['platinumBox', 'decayingBox'],
+                    exits: [{
+                        direction: 'west',
+                        to: 'northRoom',
+                    }]
+                },
+                burningRoom: {
+                    shortDescription: 'burning room',
+                    description: 'You are in a room with granite slabs for floors and ceiling, the room is really hot, you can barely stand on the floor',
+                    interactible: ['fire', 'woodenClub'],
                     exits: [{
                         direction: 'east',
-                        to: 'northRoom',
+                        to: 'southRoom'
                     }]
                 }
 
@@ -113,6 +127,7 @@ var constants = {
                         description: 'Uncapping your bottle, you scoop up some fresh water into it.',
                         able: true,
                         noremove: true,
+                        removeRequirement: false,
                         needs: [{
                             key: 'bottle',
                             description: 'You try to cup the water in your hands, but its not very effective. You realize that you need some kind of container to store water.',
@@ -167,9 +182,9 @@ var constants = {
                             description: 'You find a gold key inside the box, this seems like a chain of boxes, you think as you pocket the key.',
                             interactible: ['goldKey']
                         }, {
-                            description: 'The silver key falls out of the keyhole, just before the box vanishes into thin air. Poof.',
+                            description: 'The silver key falls out of the keyhole.',
                             interactible: ['silverKey'],
-                            to: To.room
+                            to: 'room'
                         }],
                         needs: [{
                             key: 'silverKey',
@@ -208,6 +223,35 @@ var constants = {
                         content: [{
                             description: 'Peering inside, you see a sparkle, excited you grab it. Its the hilt of a marvellous sword. You take the sword out of the box',
                             interactible: ['sword']
+                        }],
+                        needs: [{
+                            key: 'platinumKey',
+                            description: 'You try to pry open the box, but it does not give.'
+                        }]
+                    }
+                },
+                decayingBox: {
+                    shortDescription: 'decaying box',
+                    description: 'A wooden box that is almost crumbling due to rot, You can\'t even find the lock on it. It might contain something',
+                    take: {
+                        description: 'You try to lift the box, a rotting splinter pierces your hand.',
+                        able: false,
+                        loss:{
+                            health: -1
+                        }
+                    },
+                    open: {
+                        description: 'You smash the box with the wooden club, the club breaks as well',
+                        able: true,
+                        needs: [{
+                            key: 'woodenClub',
+                            description: 'You try to pry open the box, a rotting splinter pierces your hand',
+                            health: -1
+                        }],
+                        content: [{
+                            description: 'The box breaks into rotting pieces of wood',
+                            interactible: ['wood'],
+                            to: 'room'
                         }]
                     }
                 },
@@ -233,6 +277,14 @@ var constants = {
                     take: {
                         able: true,
                         description: 'You take the normal key hoping that it has a use in the future',
+                    }
+                },
+                woodenClub: {
+                    shortDescription: 'wooden club',
+                    description: 'A club made of wood. It does not look very strong, could be used to break something.',
+                    take: {
+                        able: true,
+                        description: 'You pick up the wooden club and keep it with you.',
                     }
                 },
                 scorpion: {
@@ -279,6 +331,13 @@ var constants = {
                         able: true
                     }
                 },
+                ironKey: {
+                    shortDescription: 'iron key',
+                    description: 'A solid iron key, it feels heavy in your hand, there is a lotus insignia on one side of it.',
+                    take: {
+                        able: true
+                    }
+                },
                 woodenDoor: {
                     shortDescription: 'wooden door',
                     description: 'A large and impossing wooden door, with an old fashioned knocker. A keyhole is set into the wood with elegance.',
@@ -290,6 +349,61 @@ var constants = {
                             description: 'You try to break the door open with a kick, but it is too strong and your legs hurt.',
                             health: -1
                         }]
+                    }
+                },
+                wroughtIronDoor: {
+                    shortDescription: 'wrought iron door',
+                    description: 'An iron door, completely inpenetrable.',
+                    open: {
+                        able: true,
+                        description: 'You try to insert the key, but the keyhole is a fake one. You look around and find a suspicious hole, you try the key in it, and it twists open.',
+                        needs: [{
+                            key: 'ironKey',
+                            description: 'You try to break the door open with a flying shove with your shoulder. You hurt your shoulder badly.',
+                            health: -1
+                        }]
+                    }
+                },
+                marbleDoor: {
+                    shortDescription: 'marble door',
+                    description: 'A door made from marble stone, Impossibly large. It blends perfectly with the surrounding walls, making it seem invisible',
+                    open: {
+                        able: true,
+                        description: 'The key is sucked into the keylock as soon as it is inserted, the door silently slides into the wall leaving no trace of it ever exiting.',
+                        needs: [{
+                            key: 'graniteKey',
+                            description: 'You try to shove the door out of the way, but it must be really heavy',
+                        }]
+                    }
+                },
+                fire: {
+                    shortDescription: 'fire',
+                    description: 'A burning fire, taller than you. It emits of waves of heat making it really hard to go near it.',
+                    open: {
+                        description: 'You try to open up the fire, wonder how. You get burned in the process',
+                        able: false,
+                        loss: {
+                            health: -1
+                        }
+                    },
+                    take: {
+                        description: 'You put one end of the piece of wood in the fire, it immediately blazes into a flame.', 
+                        able: true,
+                        noremove: true,
+                        needs: [{
+                            key: 'wood',
+                            description: 'You try to take the fire by cupping it in your hands, an admittedly stupid move, your hands get burned',
+                            health: -1,
+                        }],
+                    }
+                },
+                wood: {
+                    shortDescription: 'wood piece',
+                    description: 'A very dry piece of wood',
+                    take: {
+                        description: 'You take the wood piece hoping it will be useful later',
+                        able: true,
+                        amount: 3,                        
                     }
                 }
 
@@ -710,17 +824,21 @@ class Interaction extends Unique{
     noremove: boolean;
     canString: string;
     loss: Reward;
+    removeRequirement: boolean;
+    content: Array < Reward > ;
         
 
     constructor(interactionObject, name) {
         super();
         this.name = name;
         this.noremove = false;
+        this.removeRequirement = true;
         this.able = false;
         this.canString = 'cannot ';
         this.needs = [];
         this.description = 'You ' + this.canString + 'interact with ' + name;
         this.loss = new Reward({});
+        this.content = [];
         if (interactionObject) {
             if (interactionObject.description)
                 this.description = interactionObject.description;
@@ -730,10 +848,21 @@ class Interaction extends Unique{
                 this.noremove = interactionObject.noremove;
             if (interactionObject.loss)
                 this.loss = new Reward(interactionObject.loss);
-            if (interactionObject.needs) {
+            
+            if (interactionObject.needs) 
                 for (var x of interactionObject.needs)
                     this.needs.push(new Reward(x));
-            }
+            if ('removeRequirement' in interactionObject)
+                this.removeRequirement = interactionObject.removeRequirement;
+
+            if (interactionObject.content)
+                for (var x of interactionObject.content)
+                    this.content.push(new Reward(x));
+            
+            if (interactionObject.loot)
+                for (var x of interactionObject.loot)
+                    this.content.push(new Reward(x));
+            
         }
         this.canString = this.able ? '' : 'cannot ';
     }
@@ -742,10 +871,22 @@ class Interaction extends Unique{
         this.loss.giveReward();
     }
 
-    public satisfiedAll() {
+    public loseIfNotAble() {
+        if(this.loss && !this.able)
+            this.takeLoss();
+    }
+
+    public getContent() {
+        for (var reward of this.content) {
+            reward.giveReward();
+        }
+    }
+
+    public satisfiedAll(silent?:boolean) {
         for (var reward of this.needs)
             if (!reward.satisfied()) {
-                reward.giveReward();
+                if(!silent)
+                    reward.giveReward();
                 return false;
             }
         return true;
@@ -760,8 +901,9 @@ class Interaction extends Unique{
     }
 
     public removeRequirements() {
-        for (var reward of this.needs)
-            reward.remove();
+        if(this.removeRequirement)
+            for (var reward of this.needs)
+                reward.remove();
     }
 }
 
@@ -796,33 +938,21 @@ class Take extends Interaction {
             var room: Room = Room.currentRoom();
             room.remove(inRoom);
         }
+        this.removeRequirements();
         Game.print(this.description);
         player.addToInventory(inRoom);
     }
 }
 
 class Open extends Interaction {
-    content: Array < Reward > ;
     constructor(openObject, name) {
         super(openObject, name);
         this.description = 'You ' + this.canString + 'open ' + name;
-        this.content = [];
         if (openObject) {
             if (openObject.description)
                 this.description = openObject.description;
-
-            if (openObject.content)
-                for (var x of openObject.content)
-                    this.content.push(new Reward(x));
         }
     }
-
-    public getContent() {
-        for (var reward of this.content) {
-            reward.giveReward();
-        }
-    }
-
 
     public open(inRoom: string) {
         if (this.noremove) {
@@ -830,9 +960,10 @@ class Open extends Interaction {
         } else {
             var room: Room = Room.currentRoom();
             room.remove(inRoom);
-            this.removeRequirements();
         }
+        this.removeRequirements();
         Game.print(this.description);
+        // Apply loss if not able
         this.getContent();
     }
 
@@ -844,7 +975,6 @@ class Open extends Interaction {
 }
 
 class Kill extends Interaction {
-    loot: Array < Reward > ;
     removeWeakness: boolean;
     health: number;
     maxHealth: number;
@@ -852,7 +982,6 @@ class Kill extends Interaction {
     constructor(openObject, name) {
         super(openObject, name);
         this.description = 'You ' + this.canString + 'kill ' + name;
-        this.loot = [];
         this.removeWeakness = false;
         this.health = 1;
         this.health = 1;
@@ -870,20 +999,14 @@ class Kill extends Interaction {
                 this.maxHealth = openObject.health;
             }
 
-            if (openObject.loot)
-                for (var x of openObject.loot)
-                    this.loot.push(new Reward(x));
-
             if (openObject.weakness)
                 for (var x of openObject.weakness)
                     this.weakness.push(new Weakness(x));
         }
     }
 
-    public getLoot() {
-        for (var reward of this.loot) {
-            reward.giveReward();
-        }
+    public getLoot(){
+        this.getContent();
     }
 
     public updateHealth(health: number, identifier: string) {
@@ -909,6 +1032,7 @@ class Kill extends Interaction {
                 return;
             }
         }
+        // TODO , check if remove requirement is needed
         this.takeLoss();
     }
 }
@@ -916,7 +1040,7 @@ class Kill extends Interaction {
 
 class Reward {
     public key: string;
-    public to: To;
+    public to: string;
     public room: string;
     public description;
     public interactible: Array < string > ;
@@ -939,7 +1063,7 @@ class Reward {
         if (rewardObject.to != undefined)
             this.to = rewardObject.to;
         else
-            this.to = To.player;
+            this.to = 'player';
 
         if (rewardObject.health)
             this.health = rewardObject.health;
@@ -957,12 +1081,18 @@ class Reward {
     }
 
     public giveReward() {
-        Game.print(this.description);
+        if(this.description)
+            Game.print(this.description);
         for (var x of this.interactible)
-            if (this.to == To.player)
-                player.addToInventory(x);
-            else
-                Room.currentRoom().add(x);
+            switch(this.to)
+            {
+                case 'player':
+                    player.addToInventory(x);
+                    break;
+                case 'room':
+                    Room.currentRoom().add(x);
+                    break;
+            }
         player.updateHealth(this.health);
     }
 }
@@ -977,7 +1107,7 @@ class Weakness extends Reward {
         this.attack = 1;
         this.weaknessDescription = 'The same trick won\' work twice';
 
-        if (weaknessObject.isWeakness)
+        if ('isWeakness' in weaknessObject)
             this.isWeakness = weaknessObject.isWeakness;
 
         if (weaknessObject.attack)
@@ -1021,14 +1151,25 @@ class Interactible extends Unique{
     static interactibleListObject = JSON.parse(JSON.stringify(constants.games[variables.thisGame].interactible));
     static interactibleList = {};
 
+    constructor() {
+        super();
+        this.shortDescription = this.name;
+        this.description = this.shortDescription;
+    }
+
     static reset() {
         // TODO use jquery to remove this hack
         for (var key in Interactible.interactibleListObject) {
             var inter = Interactible.interactibleListObject[key];
             var insertInter = new Interactible();
             insertInter.name = key;
-            insertInter.description = inter.description;
-            insertInter.shortDescription = inter.shortDescription;
+
+            if(inter.shortDescription)
+                insertInter.shortDescription = inter.shortDescription;
+
+            if(inter.description)
+                insertInter.description = inter.description;
+
             insertInter.take = new Take(inter.take, inter.shortDescription);
             insertInter.open = new Open(inter.open, inter.shortDescription);
             insertInter.kill = new Kill(inter.kill, inter.shortDescription);
@@ -1065,13 +1206,25 @@ class Interactible extends Unique{
         }
     }
 
-    static findOne(identifier: string) {
+    static findOne(identifier: string, type?:string) {
         if (identifier in Interactible.interactibleList) {
-            return Interactible.interactibleList[identifier];
+            var inter:Interactible = Interactible.interactibleList[identifier];
+            return inter;
+        }
+        if(type)
+        {
+            for (var key in Interactible.interactibleList) {
+                var inter:Interactible = Interactible.interactibleList[key];
+                if (has(inter.shortDescription, identifier) || has(key, identifier)){
+                    if(inter[type])
+                        if(inter[type].satisfiedAll(true))
+                            return inter;
+                }
+            }
         }
         for (var key in Interactible.interactibleList) {
-            var inter = Interactible.interactibleList[key];
-            if (has(inter.shortDescription, identifier))
+            var inter:Interactible = Interactible.interactibleList[key];
+            if (has(inter.shortDescription, identifier) || has(key, identifier))
                 return inter;
         }
     }
@@ -1144,19 +1297,20 @@ class Character extends Unique {
 
     // Try to take the object
     public take(identifier: string) {
-        var inRoom = Room.currentRoom().has(identifier);
+        var inRoom = Room.currentRoom().has(identifier, 'take');
         if (inRoom) {
             if (player.has(inRoom)) {
                 Game.print("You already have " + identifier);
                 return;
             }
-            var interactible: Interactible = Interactible.findOne(inRoom);
+            var interactible: Interactible = Interactible.findOne(inRoom, 'take');
             if (interactible.takeable()) {
                 if (!interactible.take.satisfiedAll())
                     return;
                 interactible.take.take(inRoom);
             } else {
                 Game.print(interactible.take.description);
+                interactible.open.loseIfNotAble();
             }
         } else {
             Game.print("Could not find " + identifier + " here");
@@ -1170,16 +1324,17 @@ class Character extends Unique {
 
     // Try to open the object
     public open(identifier: string) {
-        var inRoom:string = Room.currentRoom().has(identifier);
+        var inRoom:string = Room.currentRoom().has(identifier, 'open');
         var exit:Exit = Room.currentRoom().findDoorExit(identifier);
         if (inRoom) {
-            var interactible: Interactible = Interactible.findOne(inRoom);
+            var interactible: Interactible = Interactible.findOne(inRoom, 'open');
             if (interactible.openable()) {
                 if (!interactible.open.satisfiedAll())
                     return;
                 interactible.open.open(inRoom);
             } else {
                 Game.print(interactible.open.description);
+                interactible.open.loseIfNotAble();
             }
         } else if (exit) {
             var door:Interactible = Room.currentRoom().findDoor(identifier);
@@ -1197,15 +1352,16 @@ class Character extends Unique {
 
     // Try to kill the object
     public kill(identifier: string) {
-        var inRoom = Room.currentRoom().has(identifier);
+        var inRoom = Room.currentRoom().has(identifier, 'kill');
         if (inRoom) {
-            var interactible: Interactible = Interactible.findOne(inRoom);
+            var interactible: Interactible = Interactible.findOne(inRoom, 'kill');
             if (interactible.killable()) {
                 if (!interactible.kill.satisfiedAll())
                     return;
                 interactible.kill.kill(inRoom);
             } else {
                 Game.print(interactible.kill.description);
+                interactible.open.loseIfNotAble();
             }
         } else {
             Game.print("Could not find " + identifier + " here");
@@ -1260,8 +1416,8 @@ class Character extends Unique {
         this.inventory = [];
         this.health = constants.maxHP;
         if (constants.debug) {
-            // this.inventory = ['normalKey', 'sword'];
-            // this.location = 'northRoom';
+            // this.inventory = ['woodenClub'];
+            // this.location = 'treasureRoom';
         }
     }
 
@@ -1372,10 +1528,21 @@ class Room extends Unique {
         {
             if(exit.isLocked()){
                 var door:Interactible = Interactible.findOne(exit.locked);
+                // Silently see if any door can be opened
+                if(door.is(identifier) && door.open.satisfiedAll(true))
+                    return exit;
+            }
+        }
+        for (var exit of this.exits)
+        {
+            if(exit.isLocked()){
+                var door:Interactible = Interactible.findOne(exit.locked);
+                // if not return a locked door
                 if(door.is(identifier))
                     return exit;
             }
         }
+
     }
 
     public findDoor(identifier:string) {
@@ -1384,26 +1551,38 @@ class Room extends Unique {
         {
             if(exit.isLocked()){
                 var door:Interactible = Interactible.findOne(exit.locked);
+                // Silently see if any door can be opened
+                if(door.is(identifier) && door.open.satisfiedAll(true))
+                    return door;
+            }
+        }
+        for (var exit of this.exits)
+        {
+            if(exit.isLocked()){
+                var door:Interactible = Interactible.findOne(exit.locked);
+                // if not return a locked door
                 if(door.is(identifier))
                     return door;
             }
         }
+
     }
 
-    public has(identifier: string) {
+    public has(identifier: string, type?: string) {
+        if(type){
+            for (var element of this.interactible) {
+                var interactible: Interactible = Interactible.findOne(element, type);
+                if (interactible && has(interactible.shortDescription, identifier))
+                    if(interactible[type] && interactible[type].satisfiedAll(true))
+                        return element;
+            }
+        }
         for (var element of this.interactible) {
-            // Check if element is part of room, else if shortDescription in room
-            if (has(element, identifier))
-                return element;
             var interactible: Interactible = Interactible.findOne(element);
             if (interactible && has(interactible.shortDescription, identifier))
                 return element;
         }
         return false;
-    }
-
-    public hasLock(identifier) {
-        // todo find whats this supposed to be
     }
 
     public findExit(direction: string) {
