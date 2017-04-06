@@ -54,6 +54,10 @@ var constants = {
                         {
                             direction: 'north',
                             to: 'northRoom'
+                        },
+                        {
+                            direction: 'south',
+                            to: 'southRoom'
                         }
                     ],
                 },
@@ -73,6 +77,29 @@ var constants = {
                     exits: [{
                             direction: 'south',
                             to: 'centerRoom'
+                        }, {
+                            direction: 'west',
+                            to: 'treasureRoom',
+                            locked: 'woodenDoor',
+                            description: 'You expect the door to be a mirage and resolve to walk through it, you walk headlong into the door and hit your face hard.'
+                        }]
+                },
+                southRoom: {
+                    shortDescription: 'south room',
+                    description: 'a damp musty smelling room. A small window overlooks a cliff where faint sounds of waves crashing can be faintly heard.',
+                    interactible: ['goldBox', 'ivoryKey'],
+                    exits: [{
+                            direction: 'north',
+                            to: 'centerRoom'
+                        }]
+                },
+                treasureRoom: {
+                    shortDescription: 'treasure room',
+                    description: 'a room filled with treasures of all kinds imaginable, there are mounds of glittering gold and shining diamonds in a huge pile',
+                    interactible: [],
+                    exits: [{
+                            direction: 'east',
+                            to: 'northRoom',
                         }]
                 }
             },
@@ -157,6 +184,25 @@ var constants = {
                             }]
                     }
                 },
+                goldBox: {
+                    shortDescription: 'gold box',
+                    description: 'A pure gold box, it glistens with a shiny lusture. It is ornately decorated with a ring of jewels around the opening.',
+                    take: {
+                        description: 'You try to take the gold box, but it does not budge, you overestimate your own strength',
+                    },
+                    open: {
+                        description: 'Fitting the key into the lock, you give it a twist. the box falls open.',
+                        able: true,
+                        content: [{
+                                description: 'Expecting treasure you slowly open the box, you find a normal looking key inside the box. Disappointed, you pocket it.',
+                                interactible: ['normalKey'],
+                            }],
+                        needs: [{
+                                key: 'goldKey',
+                                description: 'You try to hit the box repeatedly in an effort to open it, nothing happens'
+                            }]
+                    }
+                },
                 silverKey: {
                     shortDescription: 'silver key',
                     description: 'A key made out of pure silver. It glistens when you turn it in your hands. A small tulip design is embossed on it.',
@@ -172,6 +218,14 @@ var constants = {
                         description: 'You take the gold key, and place it in your pocket for later use.',
                         able: true
                     },
+                },
+                normalKey: {
+                    shortDescription: 'normal key',
+                    description: 'A key that looks like an everyday key, there seems to be nothing special about it',
+                    take: {
+                        able: true,
+                        description: 'You take the normal key hoping that it has a use in the future',
+                    }
                 },
                 scorpion: {
                     shortDescription: 'scorpion',
@@ -205,6 +259,26 @@ var constants = {
                 graniteKey: {
                     shortDescription: 'granite key',
                     description: 'A key fashioned from granite, it must have been incredibly difficult to craft.'
+                },
+                ivoryKey: {
+                    shortDescription: 'ivory key',
+                    description: 'A key carved from ivory, it must have taken a lot of time and effor to craft.',
+                    take: {
+                        able: true
+                    }
+                },
+                woodenDoor: {
+                    shortDescription: 'wooden door',
+                    description: 'A large and impossing wooden door, with an old fashioned knocker. A keyhole is set into the wood with elegance.',
+                    open: {
+                        able: true,
+                        description: 'You open the door lock with the normal Key, you try to push it open but it does not budge, You shove your weight on it, and it creaks and opens a bit allowing you room to pass',
+                        needs: [{
+                                key: 'normalKey',
+                                description: 'You try to break the door open with a kick, but it is too strong and your legs hurt',
+                                health: -1
+                            }]
+                    }
                 }
             }
         }
@@ -593,30 +667,33 @@ var Unique = (function () {
     }
     return Unique;
 }());
-Unique.ids = [];
 // Super of take, open, make classes
-var Interaction = (function () {
+var Interaction = (function (_super) {
+    __extends(Interaction, _super);
     function Interaction(interactionObject, name) {
-        this.canString = this.able ? '' : 'cannot ';
-        this.name = name;
-        this.noremove = false;
-        this.able = false;
-        this.needs = [];
-        this.description = 'You ' + this.canString + 'interact with ' + name;
+        var _this = _super.call(this) || this;
+        _this.name = name;
+        _this.noremove = false;
+        _this.able = false;
+        _this.canString = 'cannot ';
+        _this.needs = [];
+        _this.description = 'You ' + _this.canString + 'interact with ' + name;
         if (interactionObject) {
             if (interactionObject.description)
-                this.description = interactionObject.description;
+                _this.description = interactionObject.description;
             if (interactionObject.able)
-                this.able = interactionObject.able;
+                _this.able = interactionObject.able;
             if (interactionObject.noremove)
-                this.noremove = interactionObject.noremove;
+                _this.noremove = interactionObject.noremove;
             if (interactionObject.needs) {
                 for (var _i = 0, _a = interactionObject.needs; _i < _a.length; _i++) {
                     var x = _a[_i];
-                    this.needs.push(new Reward(x));
+                    _this.needs.push(new Reward(x));
                 }
             }
         }
+        _this.canString = _this.able ? '' : 'cannot ';
+        return _this;
     }
     Interaction.prototype.satisfiedAll = function () {
         for (var _i = 0, _a = this.needs; _i < _a.length; _i++) {
@@ -644,7 +721,7 @@ var Interaction = (function () {
         }
     };
     return Interaction;
-}());
+}(Unique));
 var Take = (function (_super) {
     __extends(Take, _super);
     function Take(takeObject, name) {
@@ -715,6 +792,11 @@ var Open = (function (_super) {
         }
         Game.print(this.description);
         this.getContent();
+    };
+    Open.prototype.openDoor = function (exit) {
+        exit.unlock();
+        this.removeRequirements();
+        Game.print(this.description);
     };
     return Open;
 }(Interaction));
@@ -867,14 +949,17 @@ var Weakness = (function (_super) {
     };
     return Weakness;
 }(Reward));
-var Interactible = (function () {
+var Interactible = (function (_super) {
+    __extends(Interactible, _super);
     function Interactible() {
+        return _super !== null && _super.apply(this, arguments) || this;
     }
     Interactible.reset = function () {
         // TODO use jquery to remove this hack
         for (var key in Interactible.interactibleListObject) {
             var inter = Interactible.interactibleListObject[key];
             var insertInter = new Interactible();
+            insertInter.name = key;
             insertInter.description = inter.description;
             insertInter.shortDescription = inter.shortDescription;
             insertInter.take = new Take(inter.take, inter.shortDescription);
@@ -891,6 +976,9 @@ var Interactible = (function () {
     };
     Interactible.prototype.killable = function () {
         return this.kill && this.kill.able;
+    };
+    Interactible.prototype.is = function (identifier) {
+        return this.name == identifier || has(this.shortDescription, identifier);
     };
     Interactible.findKey = function (identifier) {
         if (identifier in Interactible.interactibleList) {
@@ -913,7 +1001,7 @@ var Interactible = (function () {
         }
     };
     return Interactible;
-}());
+}(Unique));
 // public amount;
 Interactible.interactibleListObject = JSON.parse(JSON.stringify(constants.games[variables.thisGame].interactible));
 Interactible.interactibleList = {};
@@ -997,6 +1085,7 @@ var Character = (function (_super) {
     // Try to open the object
     Character.prototype.open = function (identifier) {
         var inRoom = Room.currentRoom().has(identifier);
+        var exit = Room.currentRoom().findDoorExit(identifier);
         if (inRoom) {
             var interactible = Interactible.findOne(inRoom);
             if (interactible.openable()) {
@@ -1007,9 +1096,18 @@ var Character = (function (_super) {
             else {
                 Game.print(interactible.open.description);
             }
-            // TODO if is locked door do shit
         }
-        else if (false) { }
+        else if (exit) {
+            var door = Room.currentRoom().findDoor(identifier);
+            if (door.openable()) {
+                if (!door.open.satisfiedAll())
+                    return;
+                door.open.openDoor(exit);
+            }
+            else {
+                Game.print(door.open.description);
+            }
+        }
         else {
             Game.print("Could not find " + identifier + " here");
         }
@@ -1075,8 +1173,8 @@ var Character = (function (_super) {
         this.inventory = [];
         this.health = constants.maxHP;
         if (constants.debug) {
-            // this.inventory = ['platinumKey', 'sword'];
-            // this.location = 'eastRoom';
+            this.inventory = ['normalKey', 'sword'];
+            this.location = 'northRoom';
         }
     };
     Character.prototype.moveTo = function (direction) {
@@ -1085,6 +1183,10 @@ var Character = (function (_super) {
             var exit = currentRoom.findExit(direction);
             if (exit) {
                 // TODO check if locked
+                if (exit.isLocked()) {
+                    Game.print(exit.description);
+                    return false;
+                }
                 player.location = exit.to;
                 return true;
             }
@@ -1092,7 +1194,6 @@ var Character = (function (_super) {
                 Game.print(constants.noExit);
                 return false;
             }
-            // this.location = location;
         }
         else {
             Game.print('Current location errored, please restart the game');
@@ -1106,6 +1207,9 @@ var Exit = (function () {
         this.direction = exitObject.direction;
         this.to = exitObject.to;
         this.locked = exitObject.locked;
+        this.description = 'The door is locked';
+        if (exitObject.description)
+            this.description = exitObject.description;
     }
     Exit.prototype.isLocked = function () {
         return this.locked != undefined;
@@ -1161,6 +1265,27 @@ var Room = (function (_super) {
         }
         return null;
     };
+    Room.prototype.findDoorExit = function (identifier) {
+        for (var _i = 0, _a = this.exits; _i < _a.length; _i++) {
+            var exit = _a[_i];
+            if (exit.isLocked()) {
+                var door = Interactible.findOne(exit.locked);
+                if (door.is(identifier))
+                    return exit;
+            }
+        }
+    };
+    Room.prototype.findDoor = function (identifier) {
+        // Same as above, reture door instead
+        for (var _i = 0, _a = this.exits; _i < _a.length; _i++) {
+            var exit = _a[_i];
+            if (exit.isLocked()) {
+                var door = Interactible.findOne(exit.locked);
+                if (door.is(identifier))
+                    return door;
+            }
+        }
+    };
     Room.prototype.has = function (identifier) {
         for (var _i = 0, _a = this.interactible; _i < _a.length; _i++) {
             var element = _a[_i];
@@ -1188,19 +1313,20 @@ var Room = (function (_super) {
         Room.roomList = {};
         for (var key in Room.roomListObject) {
             var room = new Room(key);
-            room.shortDescription = Room.roomListObject[key].shortDescription;
-            room.description = Room.roomListObject[key].description;
-            room.interactible = Room.roomListObject[key].interactible;
-            for (var _i = 0, _a = Room.roomListObject[key].exits; _i < _a.length; _i++) {
-                var exitObject = _a[_i];
-                var exit = new Exit(exitObject);
-                room.exits.push(exit);
-            }
+            var thisRoom = Room.roomListObject[key];
+            room.shortDescription = thisRoom.shortDescription;
+            room.description = thisRoom.description;
+            room.interactible = thisRoom.interactible;
+            if (thisRoom.exits)
+                for (var _i = 0, _a = thisRoom.exits; _i < _a.length; _i++) {
+                    var exitObject = _a[_i];
+                    var exit = new Exit(exitObject);
+                    room.exits.push(exit);
+                }
             Room.roomList[key] = room;
         }
     };
     Room.prototype.is = function (name) {
-        // TODO check if this works
         return this.name == name || has(this.shortDescription, name);
     };
     Room.prototype.describe = function () {
@@ -1232,8 +1358,11 @@ var Room = (function (_super) {
         for (var _b = 0, _c = this.exits; _b < _c.length; _b++) {
             var exit = _c[_b];
             if (exit.isLocked()) {
-                var lockDescription = "The " + exit.direction + " exit is locked.";
+                var lockDescription = "The " + exit.direction + " exit is locked";
                 // TODO, add description of door here
+                var door = Interactible.findOne(exit.locked);
+                if (door)
+                    lockDescription += " with " + door.shortDescription;
                 Game.print(lockDescription);
             }
         }

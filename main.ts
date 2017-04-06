@@ -45,6 +45,10 @@ var constants = {
                         {
                             direction: 'north',
                             to: 'northRoom'
+                        },
+                        {
+                            direction: 'south',
+                            to: 'southRoom'
                         }
                     ],
                 },
@@ -64,6 +68,29 @@ var constants = {
                     exits: [{
                         direction: 'south',
                         to: 'centerRoom'
+                    },{
+                        direction: 'west',
+                        to: 'treasureRoom',
+                        locked: 'woodenDoor',
+                        description: 'You expect the door to be a mirage and resolve to walk through it, you walk headlong into the door and hit your face hard.'
+                    }]
+                },
+                southRoom: {
+                    shortDescription: 'south room',
+                    description: 'a damp musty smelling room. A small window overlooks a cliff where faint sounds of waves crashing can be faintly heard.',
+                    interactible: ['goldBox', 'ivoryKey'],
+                    exits: [{
+                        direction: 'north',
+                        to: 'centerRoom'
+                    }]
+                },
+                treasureRoom: {
+                    shortDescription: 'treasure room',
+                    description: 'a room filled with treasures of all kinds imaginable, there are mounds of glittering gold and shining diamonds in a huge pile',
+                    interactible: [],
+                    exits: [{
+                        direction: 'east',
+                        to: 'northRoom',
                     }]
                 }
 
@@ -150,6 +177,25 @@ var constants = {
                         }]
                     }
                 },
+                goldBox: {
+                    shortDescription: 'gold box',
+                    description: 'A pure gold box, it glistens with a shiny lusture. It is ornately decorated with a ring of jewels around the opening.',
+                    take: {
+                        description: 'You try to take the gold box, but it does not budge, you overestimate your own strength',
+                    },
+                    open: {
+                        description: 'Fitting the key into the lock, you give it a twist. the box falls open.',
+                        able:true,
+                        content: [{
+                            description: 'Expecting treasure you slowly open the box, you find a normal looking key inside the box. Disappointed, you pocket it.',
+                            interactible: ['normalKey'],
+                        }],
+                        needs: [{
+                            key: 'goldKey',
+                            description: 'You try to hit the box repeatedly in an effort to open it, nothing happens'
+                        }]
+                    }
+                },
                 silverKey: {
                     shortDescription: 'silver key',
                     description: 'A key made out of pure silver. It glistens when you turn it in your hands. A small tulip design is embossed on it.',
@@ -165,6 +211,14 @@ var constants = {
                         description: 'You take the gold key, and place it in your pocket for later use.',
                         able: true
                     },
+                },
+                normalKey: {
+                    shortDescription: 'normal key',
+                    description: 'A key that looks like an everyday key, there seems to be nothing special about it',
+                    take: {
+                        able: true,
+                        description: 'You take the normal key hoping that it has a use in the future',
+                    }
                 },
                 scorpion: {
                     shortDescription: 'scorpion',
@@ -199,6 +253,26 @@ var constants = {
                 graniteKey: {
                     shortDescription: 'granite key',
                     description: 'A key fashioned from granite, it must have been incredibly difficult to craft.'
+                },
+                ivoryKey: {
+                    shortDescription: 'ivory key',
+                    description: 'A key carved from ivory, it must have taken a lot of time and effor to craft.',
+                    take: {
+                        able: true
+                    }
+                },
+                woodenDoor: {
+                    shortDescription: 'wooden door',
+                    description: 'A large and impossing wooden door, with an old fashioned knocker. A keyhole is set into the wood with elegance.',
+                    open: {
+                        able: true,
+                        description: 'You open the door lock with the normal Key, you try to push it open but it does not budge, You shove your weight on it, and it creaks and opens a bit allowing you room to pass',
+                        needs: [{
+                            key: 'normalKey',
+                            description: 'You try to break the door open with a kick, but it is too strong and your legs hurt',
+                            health: -1
+                        }]
+                    }
                 }
 
             }
@@ -607,24 +681,22 @@ class Command {
 }
 
 class Unique {
-    static ids = [];
-    public id: string;
     public name: string;
-    public desc: string;
 }
 
 // Super of take, open, make classes
-class Interaction {
+class Interaction extends Unique{
     description: string;
     able: boolean;
-    name: string;
     needs: Array < Reward > ;
     noremove: boolean;
-    canString = this.able ? '' : 'cannot ';
+    canString: string;
     constructor(interactionObject, name) {
+        super();
         this.name = name;
         this.noremove = false;
         this.able = false;
+        this.canString = 'cannot ';
         this.needs = [];
         this.description = 'You ' + this.canString + 'interact with ' + name;
         if (interactionObject) {
@@ -639,6 +711,7 @@ class Interaction {
                     this.needs.push(new Reward(x));
             }
         }
+        this.canString = this.able ? '' : 'cannot ';
     }
 
 
@@ -735,6 +808,12 @@ class Open extends Interaction {
         }
         Game.print(this.description);
         this.getContent();
+    }
+
+    public openDoor(exit: Exit) {
+        exit.unlock();
+        this.removeRequirements();
+        Game.print(this.description);
     }
 }
 
@@ -910,7 +989,7 @@ class Weakness extends Reward {
     }
 }
 
-class Interactible {
+class Interactible extends Unique{
     public shortDescription: string;
     public description: string;
     public take: Take;
@@ -925,6 +1004,7 @@ class Interactible {
         for (var key in Interactible.interactibleListObject) {
             var inter = Interactible.interactibleListObject[key];
             var insertInter = new Interactible();
+            insertInter.name = key;
             insertInter.description = inter.description;
             insertInter.shortDescription = inter.shortDescription;
             insertInter.take = new Take(inter.take, inter.shortDescription);
@@ -939,12 +1019,17 @@ class Interactible {
         return this.take && this.take.able;
     }
 
+
     public openable() {
         return this.open && this.open.able;
     }
 
     public killable() {
         return this.kill && this.kill.able;
+    }
+
+    public is(identifier: string) {
+        return this.name == identifier || has(this.shortDescription, identifier);
     }
 
     static findKey(identifier: string) {
@@ -1058,7 +1143,8 @@ class Character extends Unique {
 
     // Try to open the object
     public open(identifier: string) {
-        var inRoom = Room.currentRoom().has(identifier);
+        var inRoom:string = Room.currentRoom().has(identifier);
+        var exit:Exit = Room.currentRoom().findDoorExit(identifier);
         if (inRoom) {
             var interactible: Interactible = Interactible.findOne(inRoom);
             if (interactible.openable()) {
@@ -1068,8 +1154,16 @@ class Character extends Unique {
             } else {
                 Game.print(interactible.open.description);
             }
-            // TODO if is locked door do shit
-        } else if (false) {} else {
+        } else if (exit) {
+            var door:Interactible = Room.currentRoom().findDoor(identifier);
+            if(door.openable()){
+                if (!door.open.satisfiedAll())
+                    return;
+                door.open.openDoor(exit);
+            } else {
+                Game.print(door.open.description);
+            }
+        } else {
             Game.print("Could not find " + identifier + " here");
         }
     }
@@ -1139,8 +1233,8 @@ class Character extends Unique {
         this.inventory = [];
         this.health = constants.maxHP;
         if (constants.debug) {
-            // this.inventory = ['platinumKey', 'sword'];
-            // this.location = 'eastRoom';
+            this.inventory = ['normalKey', 'sword'];
+            this.location = 'northRoom';
         }
     }
 
@@ -1150,13 +1244,17 @@ class Character extends Unique {
             var exit = currentRoom.findExit(direction);
             if (exit) {
                 // TODO check if locked
+                if(exit.isLocked())
+                {
+                    Game.print(exit.description);
+                    return false;
+                }
                 player.location = exit.to;
                 return true;
             } else {
                 Game.print(constants.noExit);
                 return false;
             }
-            // this.location = location;
         } else {
             Game.print('Current location errored, please restart the game');
             return false;
@@ -1165,6 +1263,7 @@ class Character extends Unique {
 }
 
 class Exit {
+    description: string;
     direction: string;
     to: string;
     locked: string;
@@ -1172,6 +1271,10 @@ class Exit {
         this.direction = exitObject.direction;
         this.to = exitObject.to;
         this.locked = exitObject.locked;
+        
+        this.description = 'The door is locked';
+        if(exitObject.description)
+            this.description = exitObject.description;
     }
 
     public isLocked() {
@@ -1237,6 +1340,29 @@ class Room extends Unique {
         return null;
     }
 
+    public findDoorExit(identifier: string){
+        for (var exit of this.exits)
+        {
+            if(exit.isLocked()){
+                var door:Interactible = Interactible.findOne(exit.locked);
+                if(door.is(identifier))
+                    return exit;
+            }
+        }
+    }
+
+    public findDoor(identifier:string) {
+        // Same as above, reture door instead
+        for (var exit of this.exits)
+        {
+            if(exit.isLocked()){
+                var door:Interactible = Interactible.findOne(exit.locked);
+                if(door.is(identifier))
+                    return door;
+            }
+        }
+    }
+
     public has(identifier: string) {
         for (var element of this.interactible) {
             // Check if element is part of room, else if shortDescription in room
@@ -1264,13 +1390,15 @@ class Room extends Unique {
         Room.roomList = {};
         for (var key in Room.roomListObject) {
             var room = new Room(key);
-            room.shortDescription = Room.roomListObject[key].shortDescription;
-            room.description = Room.roomListObject[key].description;
-            room.interactible = Room.roomListObject[key].interactible;
-            for (var exitObject of Room.roomListObject[key].exits) {
-                var exit = new Exit(exitObject);
-                room.exits.push(exit);
-            }
+            var thisRoom = Room.roomListObject[key];
+            room.shortDescription = thisRoom.shortDescription;
+            room.description = thisRoom.description;
+            room.interactible = thisRoom.interactible;
+            if(thisRoom.exits)
+                for (var exitObject of thisRoom.exits) {
+                    var exit = new Exit(exitObject);
+                    room.exits.push(exit);
+                }
             Room.roomList[key] = room;
         }
     }
@@ -1282,7 +1410,6 @@ class Room extends Unique {
     }
 
     public is(name: string) {
-        // TODO check if this works
         return this.name == name || has(this.shortDescription, name);
     }
 
@@ -1307,14 +1434,16 @@ class Room extends Unique {
         var exitString = exitArray.join(', ');
         if (exitArray.length > 1) {
             Game.print("There are exits to " + exitString)
-        }
-        else if (exitArray.length == 1) {
+        } else if (exitArray.length == 1) {
             Game.print("There is an exit to " + exitString)
         }
         for (var exit of this.exits) {
             if (exit.isLocked()) {
-                var lockDescription: string = "The " + exit.direction + " exit is locked.";
+                var lockDescription: string = "The " + exit.direction + " exit is locked";
                 // TODO, add description of door here
+                var door:Interactible = Interactible.findOne(exit.locked);
+                if(door)
+                    lockDescription+= " with "+ door.shortDescription;
                 Game.print(lockDescription);
             }
         }
