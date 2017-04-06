@@ -20,190 +20,189 @@ var constants = {
     games: [
 
         {
-        roomList: {
-            westRoom: {
-                shortDescription: 'west room',
-                description: 'You are in the west end of a sloping east-west passage of barren rock.',
-                interactible: ['platinumKey', 'water'],
-                exits: {
-                    east: {
+            roomList: {
+                westRoom: {
+                    shortDescription: 'west room',
+                    description: 'You are in the west end of a sloping east-west passage of barren rock.',
+                    interactible: ['platinumKey', 'water'],
+                    exits: [{
+                        direction: 'east',
                         to: 'centerRoom'
-                    },
-                }
-            },
-            centerRoom: {
-                shortDescription: 'center room',
-                description: 'You are in the very heart of the dungeon, a windowless chamber lit only by the eerie light of glowing fungi high above. There is a prominent trophy stand in the middle, there is no trophy on it.',
-                interactible: ['copperKey'],
-                exits: {
-                    west: {
-                        to: 'westRoom'
-                    },
-                    east: {
-                        to: 'eastRoom'
-                    },
-                    north: {
-                        to: 'northRoom'
-                    }
-                },
-            },
-            eastRoom: {
-                shortDescription: 'east room',
-                description: 'a room of finished stone with high arched ceiling and soaring columns. The room has an aura of holyness to it.',
-                interactible: ['copperBox', 'scorpion'],
-                exits: {
-                    west: {
-                        to: 'centerRoom'
-                    }
-                }
-            },
-            northRoom: {
-                shortDescription: 'north room',
-                description: 'a dimly room littered with skulls. It has an eerie quiteness about it, the sound of death',
-                interactible: ['silverBox', 'bottle'],
-                exits: {
-                    south: {
-                        to: 'centerRoom'
-                    }
-                },
-            }
-
-        },
-
-        // INTERACTIBLES IN GAME
-        interactible: {
-            platinumKey: {
-                shortDescription: 'platinum key',
-                description: 'The key is made out of solid platinum, It must have cost a lot to make. It has an intricate pattern of a rose engraved on it.',
-                take: {
-                    description: 'You bend down and pick up the platinum key. You examine it for a second and slip it in your pocket.',
-                    able: true,
-                },
-            },
-            water: {
-                shortDescription: 'water',
-                description: 'Crystal clear water',
-                take: {
-                    description: 'Uncapping your bottle, you scoop up some fresh water into it.',
-                    able: true,
-                    noremove: true,
-                    needs: [{
-                        key: 'bottle',
-                        description: 'You try to cup the water in your hands, but its not very effective. You realize that you need some kind of container to store water.',
                     }],
                 },
-            },
-            bottle: {
-                shortDescription: 'bottle',
-                description: 'A regular old plastic bottle.',
-                take: {
-                    description: 'You pick up the bottle',
-                    able: true
-                }
-            },
-            copperKey: {
-                shortDescription: 'copper key',
-                description: 'A key made of copper, it has an orchid emblem enbossed on it.',
-                take: {
-                    description: 'You bend down and pick up the key. You keep it in the hopes of using it later',
-                    able: true,
+                centerRoom: {
+                    shortDescription: 'center room',
+                    description: 'You are in the very heart of the dungeon, a windowless chamber lit only by the eerie light of glowing fungi high above. There is a prominent trophy stand in the middle, there is no trophy on it.',
+                    interactible: ['copperKey'],
+                    exits: [{
+                            direction: 'west',
+                            to: 'westRoom'
+                        },
+                        {
+                            direction: 'east',
+                            to: 'eastRoom'
+                        },
+                        {
+                            direction: 'north',
+                            to: 'northRoom'
+                        }
+                    ],
                 },
-            },
-            copperBox: {
-                shortDescription: 'copper box',
-                description: 'A knee high box, made completely from copper. There\'s a small keyhole at the front of the box, a small engraving of a orchid underneath it',
-                take: {
-                    description: 'You try to lift the box, but it is too heavy.',
-                },
-                open: {
-                    description: 'Fitting the key into the box, you give it a twist. It opens with a creak.',
-                    able: true,
-                    content: [{
-                        description: 'You find a silver key inside the box. You slip it in your pocket for later use.',
-                        interactible: ['silverKey'],
+                eastRoom: {
+                    shortDescription: 'east room',
+                    description: 'a room of finished stone with high arched ceiling and soaring columns. The room has an aura of holyness to it.',
+                    interactible: ['copperBox', 'scorpion'],
+                    exits: [{
+                        direction: 'west',
+                        to: 'centerRoom'
                     }],
-                    needs: [{
-                        key: 'copperKey',
-                        description: 'You try to force the lock open, but its too strong.'
+                },
+                northRoom: {
+                    shortDescription: 'north room',
+                    description: 'a dimly room littered with skulls. It has an eerie quiteness about it, the sound of death',
+                    interactible: ['silverBox', 'bottle'],
+                    exits: [{
+                        direction: 'south',
+                        to: 'centerRoom'
                     }]
                 }
+
             },
-            silverBox: {
-                shortDescription: 'silver box',
-                description: 'A box made out of pure silver, you can see your face off its reflection. Its apparent that it was crafted with much care.',
-                take: {
-                    description: 'You try to lift the box, but it is bolted to the floor.'
-                },
-                open: {
-                    description: 'Fitting the silver key into the box, you open it, anxious for its contents.',
-                    able: true,
-                    content: [{
-                        description: 'You find a gold key inside the box, this seems like a chain of boxes, you think as you pocket the key.',
-                        interactible: ['goldKey']
-                    }, {
-                        description: 'The silver key falls out of the keyhole, just before the box vanishes into thin air. Poof.',
-                        interactible: ['silverKey'],
-                        to: To.room
-                    }],
-                    needs: [{
-                        key: 'silverKey',
-                        description: 'You try to force the lock open, but it won\'t give'
-                    }]
-                }
-            },
-            silverKey: {
-                shortDescription: 'silver key',
-                description: 'A key made out of pure silver. It glistens when you turn it in your hands. A small tulip design is embossed on it.',
-                take: {
-                    description: 'You take the silver key, and place it in your pocket for later use.',
-                    able: true
-                },
-            },
-            goldKey: {
-                shortDescription: 'gold key',
-                description: 'A key made out of pure gold. You can see the light glow from it.',
-                take: {
-                    description: 'You take the gold key, and place it in your pocket for later use.',
-                    able: true
-                },
-            },
-            scorpion: {
-                shortDescription: 'scorpion',
-                description: 'A menacing scorpion with its stinger raised, poised to strike.',
-                kill: {
-                    able: true,
-                    removeWeakness: true,
-                    health: 1,
-                    weakness: [{
-                        key: 'sword',
-                        description: 'The scorpion strikes, you sidestep the attack and drive your sword through it. It thrashes around for sometime and finally dies.',
-                        health: -1,
-                        attack: -1,
-                        isWeakness: true,
-                        weaknessDescription: 'You take a swing at the scorpion with the sword, but the wily creature sidesteps you',
-                    }],
-                    loot: [{
-                        description: 'From the hole in its stomach, a key falls to the floor, intrigued you take it.',
-                        interactible: ['graniteKey'],
-                    }],
-                    loss: {
-                        description: 'The scorpion strikes, you try to sidestep it and catch its tail with your bare hands, but it is faster than you and strikes you square in your heart',
-                        health: -1,
+
+            // INTERACTIBLES IN GAME
+            interactible: {
+                platinumKey: {
+                    shortDescription: 'platinum key',
+                    description: 'The key is made out of solid platinum, It must have cost a lot to make. It has an intricate pattern of a rose engraved on it.',
+                    take: {
+                        description: 'You bend down and pick up the platinum key. You examine it for a second and slip it in your pocket.',
+                        able: true,
                     },
+                },
+                water: {
+                    shortDescription: 'water',
+                    description: 'Crystal clear water',
+                    take: {
+                        description: 'Uncapping your bottle, you scoop up some fresh water into it.',
+                        able: true,
+                        noremove: true,
+                        needs: [{
+                            key: 'bottle',
+                            description: 'You try to cup the water in your hands, but its not very effective. You realize that you need some kind of container to store water.',
+                        }],
+                    },
+                },
+                bottle: {
+                    shortDescription: 'bottle',
+                    description: 'A regular old plastic bottle.',
+                    take: {
+                        description: 'You pick up the bottle',
+                        able: true
+                    }
+                },
+                copperKey: {
+                    shortDescription: 'copper key',
+                    description: 'A key made of copper, it has an orchid emblem enbossed on it.',
+                    take: {
+                        description: 'You bend down and pick up the key. You keep it in the hopes of using it later',
+                        able: true,
+                    },
+                },
+                copperBox: {
+                    shortDescription: 'copper box',
+                    description: 'A knee high box, made completely from copper. There\'s a small keyhole at the front of the box, a small engraving of a orchid underneath it',
+                    take: {
+                        description: 'You try to lift the box, but it is too heavy.',
+                    },
+                    open: {
+                        description: 'Fitting the key into the box, you give it a twist. It opens with a creak.',
+                        able: true,
+                        content: [{
+                            description: 'You find a silver key inside the box. You slip it in your pocket for later use.',
+                            interactible: ['silverKey'],
+                        }],
+                        needs: [{
+                            key: 'copperKey',
+                            description: 'You try to force the lock open, but its too strong.'
+                        }]
+                    }
+                },
+                silverBox: {
+                    shortDescription: 'silver box',
+                    description: 'A box made out of pure silver, you can see your face off its reflection. Its apparent that it was crafted with much care.',
+                    take: {
+                        description: 'You try to lift the box, but it is bolted to the floor.'
+                    },
+                    open: {
+                        description: 'Fitting the silver key into the box, you open it, anxious for its contents.',
+                        able: true,
+                        content: [{
+                            description: 'You find a gold key inside the box, this seems like a chain of boxes, you think as you pocket the key.',
+                            interactible: ['goldKey']
+                        }, {
+                            description: 'The silver key falls out of the keyhole, just before the box vanishes into thin air. Poof.',
+                            interactible: ['silverKey'],
+                            to: To.room
+                        }],
+                        needs: [{
+                            key: 'silverKey',
+                            description: 'You try to force the lock open, but it won\'t give'
+                        }]
+                    }
+                },
+                silverKey: {
+                    shortDescription: 'silver key',
+                    description: 'A key made out of pure silver. It glistens when you turn it in your hands. A small tulip design is embossed on it.',
+                    take: {
+                        description: 'You take the silver key, and place it in your pocket for later use.',
+                        able: true
+                    },
+                },
+                goldKey: {
+                    shortDescription: 'gold key',
+                    description: 'A key made out of pure gold. You can see the light glow from it.',
+                    take: {
+                        description: 'You take the gold key, and place it in your pocket for later use.',
+                        able: true
+                    },
+                },
+                scorpion: {
+                    shortDescription: 'scorpion',
+                    description: 'A menacing scorpion with its stinger raised, poised to strike.',
+                    kill: {
+                        able: true,
+                        removeWeakness: true,
+                        health: 1,
+                        weakness: [{
+                            key: 'sword',
+                            description: 'The scorpion strikes, you sidestep the attack and drive your sword through it. It thrashes around for sometime and finally dies.',
+                            health: -1,
+                            attack: -1,
+                            isWeakness: true,
+                            weaknessDescription: 'You take a swing at the scorpion with the sword, but the wily creature sidesteps you',
+                        }],
+                        loot: [{
+                            description: 'From the hole in its stomach, a key falls to the floor, intrigued you take it.',
+                            interactible: ['graniteKey'],
+                        }],
+                        loss: {
+                            description: 'The scorpion strikes, you try to sidestep it and catch its tail with your bare hands, but it is faster than you and strikes you square in your heart',
+                            health: -1,
+                        },
+                    }
+                },
+                sword: {
+                    shortDescription: 'sword',
+                    description: 'A glistening sword made with pure steel. You can see a small ruby set on its hilt.',
+
+                },
+                graniteKey: {
+                    shortDescription: 'granite key',
+                    description: 'A key fashioned from granite, it must have been incredibly difficult to craft.'
                 }
-            },
-            sword: {
-                shortDescription: 'sword',
-                description: 'A glistening sword made with pure steel. You can see a small ruby set on its hilt.',
 
-            },
-            graniteKey: {
-                shortDescription: 'granite key',
-                description: 'A key fashioned from granite, it must have been incredibly difficult to craft.'
             }
-
         }
-    }
     ],
 }
 
@@ -1069,7 +1068,8 @@ class Character extends Unique {
             } else {
                 Game.print(interactible.open.description);
             }
-        } else {
+            // TODO if is locked door do shit
+        } else if (false) {} else {
             Game.print("Could not find " + identifier + " here");
         }
     }
@@ -1164,10 +1164,33 @@ class Character extends Unique {
     }
 }
 
+class Exit {
+    direction: string;
+    to: string;
+    locked: string;
+    constructor(exitObject) {
+        this.direction = exitObject.direction;
+        this.to = exitObject.to;
+        this.locked = exitObject.locked;
+    }
+
+    public isLocked() {
+        return this.locked != undefined;
+    }
+
+    public towards(direction: string) {
+        return this.direction == direction;
+    }
+
+    public unlock() {
+        this.locked = undefined;
+    }
+}
+
 class Room extends Unique {
     shortDescription: string;
     description: string;
-    exits = {};
+    exits: Array < Exit > ;
     interactible: Array < string > ;
 
 
@@ -1185,6 +1208,7 @@ class Room extends Unique {
                 return interactible.kill;
         }
     }
+
 
     public remove(item: string) {
         if (item in this.interactible)
@@ -1225,12 +1249,15 @@ class Room extends Unique {
         return false;
     }
 
+    public hasLock(identifier) {
+        // todo find whats this supposed to be
+    }
+
     public findExit(direction: string) {
-        if (direction in this.exits) {
-            return this.exits[direction];
-        } else {
-            return null;
-        }
+        for (var exit of this.exits)
+            if (exit.towards(direction))
+                return exit;
+        return null;
     }
 
     static reset() {
@@ -1240,12 +1267,9 @@ class Room extends Unique {
             room.shortDescription = Room.roomListObject[key].shortDescription;
             room.description = Room.roomListObject[key].description;
             room.interactible = Room.roomListObject[key].interactible;
-            for (var exitKey in Room.roomListObject[key].exits) {
-                var exit = Room.roomListObject[key].exits[exitKey];
-                var roomExit = {};
-                roomExit['to'] = exit.to;
-                roomExit['locked'] = exit.locked;
-                room.exits[exitKey] = roomExit;
+            for (var exitObject of Room.roomListObject[key].exits) {
+                var exit = new Exit(exitObject);
+                room.exits.push(exit);
             }
             Room.roomList[key] = room;
         }
@@ -1253,6 +1277,8 @@ class Room extends Unique {
     constructor(name: string) {
         super();
         this.name = name;
+        this.exits = [];
+        this.interactible = [];
     }
 
     public is(name: string) {
@@ -1275,19 +1301,20 @@ class Room extends Unique {
         // print exits
         if (this.exits != {})
             Game.print(constants.seperator);
-        var exitArray = Object.keys(this.exits)
+        var exitArray = this.exits.map(x => {
+            return x.direction;
+        });
         var exitString = exitArray.join(', ');
         if (exitArray.length > 1) {
             Game.print("There are exits to " + exitString)
         }
-        if (exitArray.length == 1) {
+        else if (exitArray.length == 1) {
             Game.print("There is an exit to " + exitString)
         }
-        for (var key in this.exits) {
-            if (this.exits[key].locked) {
-                var lockDescription: string = "The " + key + " exit is locked.";
+        for (var exit of this.exits) {
+            if (exit.isLocked()) {
+                var lockDescription: string = "The " + exit.direction + " exit is locked.";
                 // TODO, add description of door here
-
                 Game.print(lockDescription);
             }
         }

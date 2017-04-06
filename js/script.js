@@ -34,47 +34,46 @@ var constants = {
                     shortDescription: 'west room',
                     description: 'You are in the west end of a sloping east-west passage of barren rock.',
                     interactible: ['platinumKey', 'water'],
-                    exits: {
-                        east: {
+                    exits: [{
+                            direction: 'east',
                             to: 'centerRoom'
-                        },
-                    }
+                        }],
                 },
                 centerRoom: {
                     shortDescription: 'center room',
                     description: 'You are in the very heart of the dungeon, a windowless chamber lit only by the eerie light of glowing fungi high above. There is a prominent trophy stand in the middle, there is no trophy on it.',
                     interactible: ['copperKey'],
-                    exits: {
-                        west: {
+                    exits: [{
+                            direction: 'west',
                             to: 'westRoom'
                         },
-                        east: {
+                        {
+                            direction: 'east',
                             to: 'eastRoom'
                         },
-                        north: {
+                        {
+                            direction: 'north',
                             to: 'northRoom'
                         }
-                    },
+                    ],
                 },
                 eastRoom: {
                     shortDescription: 'east room',
                     description: 'a room of finished stone with high arched ceiling and soaring columns. The room has an aura of holyness to it.',
                     interactible: ['copperBox', 'scorpion'],
-                    exits: {
-                        west: {
+                    exits: [{
+                            direction: 'west',
                             to: 'centerRoom'
-                        }
-                    }
+                        }],
                 },
                 northRoom: {
                     shortDescription: 'north room',
                     description: 'a dimly room littered with skulls. It has an eerie quiteness about it, the sound of death',
                     interactible: ['silverBox', 'bottle'],
-                    exits: {
-                        south: {
+                    exits: [{
+                            direction: 'south',
                             to: 'centerRoom'
-                        }
-                    },
+                        }]
                 }
             },
             // INTERACTIBLES IN GAME
@@ -1008,7 +1007,9 @@ var Character = (function (_super) {
             else {
                 Game.print(interactible.open.description);
             }
+            // TODO if is locked door do shit
         }
+        else if (false) { }
         else {
             Game.print("Could not find " + identifier + " here");
         }
@@ -1100,12 +1101,30 @@ var Character = (function (_super) {
     };
     return Character;
 }(Unique));
+var Exit = (function () {
+    function Exit(exitObject) {
+        this.direction = exitObject.direction;
+        this.to = exitObject.to;
+        this.locked = exitObject.locked;
+    }
+    Exit.prototype.isLocked = function () {
+        return this.locked != undefined;
+    };
+    Exit.prototype.towards = function (direction) {
+        return this.direction == direction;
+    };
+    Exit.prototype.unlock = function () {
+        this.locked = undefined;
+    };
+    return Exit;
+}());
 var Room = (function (_super) {
     __extends(Room, _super);
     function Room(name) {
         var _this = _super.call(this) || this;
-        _this.exits = {};
         _this.name = name;
+        _this.exits = [];
+        _this.interactible = [];
         return _this;
     }
     Room.currentRoom = function () {
@@ -1154,13 +1173,16 @@ var Room = (function (_super) {
         }
         return false;
     };
+    Room.prototype.hasLock = function (identifier) {
+        // todo find whats this supposed to be
+    };
     Room.prototype.findExit = function (direction) {
-        if (direction in this.exits) {
-            return this.exits[direction];
+        for (var _i = 0, _a = this.exits; _i < _a.length; _i++) {
+            var exit = _a[_i];
+            if (exit.towards(direction))
+                return exit;
         }
-        else {
-            return null;
-        }
+        return null;
     };
     Room.reset = function () {
         Room.roomList = {};
@@ -1169,12 +1191,10 @@ var Room = (function (_super) {
             room.shortDescription = Room.roomListObject[key].shortDescription;
             room.description = Room.roomListObject[key].description;
             room.interactible = Room.roomListObject[key].interactible;
-            for (var exitKey in Room.roomListObject[key].exits) {
-                var exit = Room.roomListObject[key].exits[exitKey];
-                var roomExit = {};
-                roomExit['to'] = exit.to;
-                roomExit['locked'] = exit.locked;
-                room.exits[exitKey] = roomExit;
+            for (var _i = 0, _a = Room.roomListObject[key].exits; _i < _a.length; _i++) {
+                var exitObject = _a[_i];
+                var exit = new Exit(exitObject);
+                room.exits.push(exit);
             }
             Room.roomList[key] = room;
         }
@@ -1199,17 +1219,20 @@ var Room = (function (_super) {
         // print exits
         if (this.exits != {})
             Game.print(constants.seperator);
-        var exitArray = Object.keys(this.exits);
+        var exitArray = this.exits.map(function (x) {
+            return x.direction;
+        });
         var exitString = exitArray.join(', ');
         if (exitArray.length > 1) {
             Game.print("There are exits to " + exitString);
         }
-        if (exitArray.length == 1) {
+        else if (exitArray.length == 1) {
             Game.print("There is an exit to " + exitString);
         }
-        for (var key in this.exits) {
-            if (this.exits[key].locked) {
-                var lockDescription = "The " + key + " exit is locked.";
+        for (var _b = 0, _c = this.exits; _b < _c.length; _b++) {
+            var exit = _c[_b];
+            if (exit.isLocked()) {
+                var lockDescription = "The " + exit.direction + " exit is locked.";
                 // TODO, add description of door here
                 Game.print(lockDescription);
             }
