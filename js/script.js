@@ -20,9 +20,9 @@ var constants = {
     easterEgg: ['go up', 'go up', 'go down', 'go down', 'left ', 'right ', 'left ', 'right ', 'b ', 'a '],
     seperator: '..',
     maxHP: 5,
-    // ROOMS IN GAME
     games: [
         {
+            // ROOMS IN GAME
             roomList: {
                 westRoom: {
                     shortDescription: 'west room',
@@ -132,9 +132,9 @@ var constants = {
                         description: 'Uncapping your bottle, you scoop up some fresh water into it.',
                         able: true,
                         noremove: true,
-                        removeRequirement: false,
                         needs: [{
                                 key: 'bottle',
+                                noremove: true,
                                 description: 'You try to cup the water in your hands, but its not very effective. You realize that you need some kind of container to store water.',
                             }],
                     },
@@ -408,6 +408,33 @@ var constants = {
                         description: 'You take the wood piece hoping it will be useful later',
                         able: true,
                         amount: 3,
+                    }
+                },
+                stake: {
+                    shortDescription: 'wooden stake',
+                    description: 'A stake made by sharpening wood into a point, could be useful as a weapon',
+                    take: {
+                        able: true,
+                    },
+                    open: {
+                        able: true,
+                        description: 'You try to open the stake, you apply force and it breaks as a result.',
+                        needs: [{
+                                key: 'stake',
+                                description: 'You need a stake to open it',
+                            }],
+                    },
+                    make: {
+                        description: 'Using your sword, you chip at the end of the wood piece till it is sharpened to a point.',
+                        able: true,
+                        needs: [{
+                                key: 'wood',
+                                description: 'You realise that you dont have anything that can be made into a stake with you',
+                            }, {
+                                key: 'sword',
+                                description: 'You dont have anything to sharpen the wood with',
+                                noremove: true
+                            }],
                     }
                 }
             }
@@ -741,6 +768,9 @@ Command.commands = {
         alternatives: ['craft', 'build'],
         extra: '[object]',
         missedExtra: 'Please specify what to make',
+        execute: function (command) {
+            player.make(command.object);
+        }
     },
     'ls': {
         desc: 'Combination of inventory and look',
@@ -804,10 +834,10 @@ var Interaction = (function (_super) {
         var _this = _super.call(this) || this;
         _this.name = name;
         _this.noremove = false;
-        _this.removeRequirement = true;
         _this.able = false;
         _this.canString = 'cannot ';
         _this.needs = [];
+        _this.progress = 0;
         _this.description = 'You ' + _this.canString + 'interact with ' + name;
         _this.loss = new Reward({});
         _this.content = [];
@@ -818,6 +848,8 @@ var Interaction = (function (_super) {
                 _this.able = interactionObject.able;
             if (interactionObject.noremove)
                 _this.noremove = interactionObject.noremove;
+            if (interactionObject.progress)
+                _this.progress = interactionObject.progress;
             if (interactionObject.loss)
                 _this.loss = new Reward(interactionObject.loss);
             if (interactionObject.needs)
@@ -825,8 +857,6 @@ var Interaction = (function (_super) {
                     var x = _a[_i];
                     _this.needs.push(new Reward(x));
                 }
-            if ('removeRequirement' in interactionObject)
-                _this.removeRequirement = interactionObject.removeRequirement;
             if (interactionObject.content)
                 for (var _b = 0, _c = interactionObject.content; _b < _c.length; _b++) {
                     var x = _c[_b];
@@ -875,11 +905,11 @@ var Interaction = (function (_super) {
         return false;
     };
     Interaction.prototype.removeRequirements = function () {
-        if (this.removeRequirement)
-            for (var _i = 0, _a = this.needs; _i < _a.length; _i++) {
-                var reward = _a[_i];
+        for (var _i = 0, _a = this.needs; _i < _a.length; _i++) {
+            var reward = _a[_i];
+            if (!reward.noremove)
                 reward.remove();
-            }
+        }
     };
     return Interaction;
 }(Unique));
@@ -1009,6 +1039,24 @@ var Kill = (function (_super) {
     };
     return Kill;
 }(Interaction));
+var Make = (function (_super) {
+    __extends(Make, _super);
+    function Make(makeObject, name) {
+        var _this = _super.call(this, makeObject, name) || this;
+        _this.description = 'You ' + _this.canString + 'make ' + name;
+        if (makeObject) {
+            if (makeObject.description)
+                _this.description = makeObject.description;
+        }
+        return _this;
+    }
+    Make.prototype.make = function (inRoom) {
+        this.removeRequirements();
+        Game.print(this.description);
+        player.addToInventory(inRoom);
+    };
+    return Make;
+}(Interaction));
 var Reward = (function () {
     function Reward(rewardObject) {
         if (rewardObject.key)
@@ -1017,6 +1065,8 @@ var Reward = (function () {
             this.room = rewardObject.room;
         if (rewardObject.description)
             this.description = rewardObject.description;
+        if (rewardObject.noremove)
+            this.noremove = rewardObject.noremove;
         if (rewardObject.interactible)
             this.interactible = rewardObject.interactible;
         else
@@ -1112,9 +1162,12 @@ var Interactible = (function (_super) {
                 insertInter.shortDescription = inter.shortDescription;
             if (inter.description)
                 insertInter.description = inter.description;
+            if (inter.alternatives)
+                insertInter.alternatives = inter.alternatives;
             insertInter.take = new Take(inter.take, inter.shortDescription);
             insertInter.open = new Open(inter.open, inter.shortDescription);
             insertInter.kill = new Kill(inter.kill, inter.shortDescription);
+            insertInter.make = new Make(inter.make, inter.shortDescription);
             Interactible.interactibleList[key] = (insertInter);
         }
     };
@@ -1126,6 +1179,9 @@ var Interactible = (function (_super) {
     };
     Interactible.prototype.killable = function () {
         return this.kill && this.kill.able;
+    };
+    Interactible.prototype.makeable = function () {
+        return this.make && this.make.able;
     };
     Interactible.prototype.is = function (identifier) {
         return this.name == identifier || has(this.shortDescription, identifier);
@@ -1148,7 +1204,7 @@ var Interactible = (function (_super) {
         if (type) {
             for (var key in Interactible.interactibleList) {
                 var inter = Interactible.interactibleList[key];
-                if (has(inter.shortDescription, identifier) || has(key, identifier)) {
+                if (has(inter.shortDescription, identifier) || has(key, identifier) || has(inter.alternatives, identifier)) {
                     if (inter[type])
                         if (inter[type].satisfiedAll(true))
                             return inter;
@@ -1157,8 +1213,9 @@ var Interactible = (function (_super) {
         }
         for (var key in Interactible.interactibleList) {
             var inter = Interactible.interactibleList[key];
-            if (has(inter.shortDescription, identifier) || has(key, identifier))
+            if (has(inter.shortDescription, identifier) || has(key, identifier) || has(inter.alternatives, identifier)) {
                 return inter;
+            }
         }
     };
     return Interactible;
@@ -1243,6 +1300,27 @@ var Character = (function (_super) {
         }
         else {
             Game.print("Could not find " + identifier + " here");
+        }
+    };
+    Character.prototype.make = function (identifier) {
+        var interactible = Interactible.findOne(identifier, 'make');
+        if (interactible) {
+            if (player.has(interactible.name)) {
+                Game.print("You already have " + identifier);
+                return;
+            }
+            if (interactible.makeable()) {
+                if (!interactible.make.satisfiedAll())
+                    return;
+                interactible.make.make(interactible.name);
+            }
+            else {
+                Game.print(interactible.make.description);
+                interactible.make.loseIfNotAble();
+            }
+        }
+        else {
+            Game.print('You cannot make ' + identifier);
         }
     };
     Character.prototype.removeFromInventory = function (identifier) {

@@ -12,10 +12,10 @@ var constants = {
     maxHP: 5,
 
 
-    // ROOMS IN GAME
     games: [
 
         {
+            // ROOMS IN GAME
             roomList: {
                 westRoom: {
                     shortDescription: 'west room',
@@ -127,9 +127,9 @@ var constants = {
                         description: 'Uncapping your bottle, you scoop up some fresh water into it.',
                         able: true,
                         noremove: true,
-                        removeRequirement: false,
                         needs: [{
                             key: 'bottle',
+                            noremove: true,
                             description: 'You try to cup the water in your hands, but its not very effective. You realize that you need some kind of container to store water.',
                         }],
                     },
@@ -405,6 +405,33 @@ var constants = {
                         able: true,
                         amount: 3,                        
                     }
+                },
+                stake: {
+                    shortDescription: 'wooden stake',
+                    description: 'A stake made by sharpening wood into a point, could be useful as a weapon',
+                    take: {
+                        able: true,
+                    },
+                    open: {
+                        able: true,
+                        description: 'You try to open the stake, you apply force and it breaks as a result.',
+                        needs: [{
+                            key: 'stake',
+                            description: 'You need a stake to open it',
+                        }],
+                    },
+                    make: {
+                        description: 'Using your sword, you chip at the end of the wood piece till it is sharpened to a point.',
+                        able: true,
+                        needs: [{
+                            key: 'wood',
+                            description: 'You realise that you dont have anything that can be made into a stake with you',
+                        },{
+                            key: 'sword',
+                            description: 'You dont have anything to sharpen the wood with',
+                            noremove: true
+                        }],
+                    }
                 }
 
             }
@@ -662,6 +689,9 @@ class Command {
             alternatives: ['craft', 'build'],
             extra: '[object]',
             missedExtra: 'Please specify what to make',
+            execute: (command: Command) => {
+                player.make(command.object);
+            }
         },
         'ls': {
             desc: 'Combination of inventory and look',
@@ -821,10 +851,10 @@ class Interaction extends Unique{
     description: string;
     able: boolean;
     needs: Array < Reward > ;
+    progress: number;
     noremove: boolean;
     canString: string;
     loss: Reward;
-    removeRequirement: boolean;
     content: Array < Reward > ;
         
 
@@ -832,10 +862,10 @@ class Interaction extends Unique{
         super();
         this.name = name;
         this.noremove = false;
-        this.removeRequirement = true;
         this.able = false;
         this.canString = 'cannot ';
         this.needs = [];
+        this.progress = 0;
         this.description = 'You ' + this.canString + 'interact with ' + name;
         this.loss = new Reward({});
         this.content = [];
@@ -846,14 +876,16 @@ class Interaction extends Unique{
                 this.able = interactionObject.able;
             if (interactionObject.noremove)
                 this.noremove = interactionObject.noremove;
+            
+            if (interactionObject.progress)
+                this.progress = interactionObject.progress;
+            
             if (interactionObject.loss)
                 this.loss = new Reward(interactionObject.loss);
             
             if (interactionObject.needs) 
                 for (var x of interactionObject.needs)
                     this.needs.push(new Reward(x));
-            if ('removeRequirement' in interactionObject)
-                this.removeRequirement = interactionObject.removeRequirement;
 
             if (interactionObject.content)
                 for (var x of interactionObject.content)
@@ -901,8 +933,8 @@ class Interaction extends Unique{
     }
 
     public removeRequirements() {
-        if(this.removeRequirement)
-            for (var reward of this.needs)
+        for (var reward of this.needs)
+            if(!reward.noremove)
                 reward.remove();
     }
 }
@@ -1037,6 +1069,24 @@ class Kill extends Interaction {
     }
 }
 
+class Make extends Interaction {
+    public constructor(makeObject, name)
+    {
+        super(makeObject,name);
+        this.description = 'You '+this.canString + 'make ' + name;
+        if(makeObject)
+        {
+            if(makeObject.description)
+                this.description = makeObject.description;
+        }
+    }
+
+    public make(inRoom: string) {
+        this.removeRequirements();
+        Game.print(this.description);
+        player.addToInventory(inRoom);
+    }
+}
 
 class Reward {
     public key: string;
@@ -1045,6 +1095,7 @@ class Reward {
     public description;
     public interactible: Array < string > ;
     public health: number;
+    public noremove: false;
     constructor(rewardObject) {
         if (rewardObject.key)
             this.key = rewardObject.key;
@@ -1054,6 +1105,9 @@ class Reward {
 
         if (rewardObject.description)
             this.description = rewardObject.description;
+
+        if (rewardObject.noremove)
+            this.noremove = rewardObject.noremove;
 
         if (rewardObject.interactible)
             this.interactible = rewardObject.interactible;
@@ -1144,9 +1198,11 @@ class Weakness extends Reward {
 class Interactible extends Unique{
     public shortDescription: string;
     public description: string;
+    public alternatives: Array<string>;
     public take: Take;
     public open: Open;
     public kill: Kill;
+    public make: Make;
     // public amount;
     static interactibleListObject = JSON.parse(JSON.stringify(constants.games[variables.thisGame].interactible));
     static interactibleList = {};
@@ -1170,9 +1226,13 @@ class Interactible extends Unique{
             if(inter.description)
                 insertInter.description = inter.description;
 
+            if(inter.alternatives)
+                insertInter.alternatives = inter.alternatives;
+
             insertInter.take = new Take(inter.take, inter.shortDescription);
             insertInter.open = new Open(inter.open, inter.shortDescription);
             insertInter.kill = new Kill(inter.kill, inter.shortDescription);
+            insertInter.make = new Make(inter.make, inter.shortDescription);
 
             Interactible.interactibleList[key] = (insertInter);
         }
@@ -1182,13 +1242,16 @@ class Interactible extends Unique{
         return this.take && this.take.able;
     }
 
-
     public openable() {
         return this.open && this.open.able;
     }
 
     public killable() {
         return this.kill && this.kill.able;
+    }
+
+    public makeable() {
+        return this.make && this.make.able;
     }
 
     public is(identifier: string) {
@@ -1215,7 +1278,8 @@ class Interactible extends Unique{
         {
             for (var key in Interactible.interactibleList) {
                 var inter:Interactible = Interactible.interactibleList[key];
-                if (has(inter.shortDescription, identifier) || has(key, identifier)){
+                if (has(inter.shortDescription, identifier) || has(key, identifier) || has(inter.alternatives, identifier) )
+                {
                     if(inter[type])
                         if(inter[type].satisfiedAll(true))
                             return inter;
@@ -1224,8 +1288,10 @@ class Interactible extends Unique{
         }
         for (var key in Interactible.interactibleList) {
             var inter:Interactible = Interactible.interactibleList[key];
-            if (has(inter.shortDescription, identifier) || has(key, identifier))
+            if (has(inter.shortDescription, identifier) || has(key, identifier) || has(inter.alternatives, identifier) )
+            {
                 return inter;
+            }
         }
     }
 }
@@ -1316,6 +1382,28 @@ class Character extends Unique {
             Game.print("Could not find " + identifier + " here");
         }
     }
+
+    public make(identifier: string) {
+        var interactible:Interactible = Interactible.findOne(identifier, 'make');
+        if(interactible)
+        {
+            if (player.has(interactible.name)) {
+                Game.print("You already have " + identifier);
+                return;
+            }
+            if (interactible.makeable()) {
+                if (!interactible.make.satisfiedAll())
+                    return;
+                interactible.make.make(interactible.name);
+            } else {
+                Game.print(interactible.make.description);
+                interactible.make.loseIfNotAble();
+            }
+        }else{
+            Game.print('You cannot make ' + identifier);
+        }
+    }
+
 
     public removeFromInventory(identifier: string) {
         if (Interactible.findOne(identifier))
