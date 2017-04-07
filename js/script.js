@@ -63,6 +63,10 @@ var constants = {
                     exits: [{
                             direction: 'west',
                             to: 'centerRoom'
+                        }, {
+                            direction: 'south',
+                            to: 'cavern',
+                            locked: 'stoneDoor'
                         }],
                 },
                 northRoom: {
@@ -86,8 +90,8 @@ var constants = {
                 },
                 southRoom: {
                     shortDescription: 'south room',
-                    description: 'You are in a damp musty smelling room. A small window overlooks a cliff where faint sounds of waves crashing can be faintly heard.',
-                    interactible: ['goldBox', 'ivoryKey'],
+                    description: 'You are in a small room. No bigger than a broom closet. It smells musty.',
+                    interactible: ['goldBox', 'dryBox'],
                     exits: [{
                             direction: 'north',
                             to: 'centerRoom'
@@ -323,11 +327,24 @@ var constants = {
                         loot: [{
                                 description: 'From the hole in its stomach, a key falls to the floor, intrigued you take it.',
                                 interactible: ['graniteKey'],
+                            }, {
+                                interactible: ['scorpionCarcass'],
+                                to: 'room'
                             }],
                         loss: {
                             description: 'The scorpion strikes, you try to avoid it and catch its tail with your bare hands, but it is faster than you and stings you square in your heart',
                             health: -2,
                         },
+                    }
+                },
+                scorpionCarcass: {
+                    shortDescription: 'scorpion carcass',
+                    description: 'The carcass of the scorpion you killed, it twitches occasionally.',
+                    take: {
+                        description: 'You try to take the carcass, the stinger of the scorpion carcass twiches unexpectedly, and strikes you',
+                        loss: {
+                            health: -2
+                        }
                     }
                 },
                 sword: {
@@ -368,6 +385,18 @@ var constants = {
                                 key: 'normalKey',
                                 description: 'You try to break the door open with a kick, but it is too strong and your legs hurt.',
                                 health: -1
+                            }]
+                    }
+                },
+                stoneDoor: {
+                    shortDescription: 'stone door',
+                    description: 'A large stone door made with a single block of stone. It is carved from top to bottom with hard to discern patterns.',
+                    open: {
+                        able: true,
+                        description: 'Fitting the rock cut key into a hidden section of the door, it slides aside revealing a new path',
+                        needs: [{
+                                key: 'rockKey',
+                                description: 'You try to shove the door with your shoulder. Stone vs shoulder, stone wins',
                             }]
                     }
                 },
@@ -637,7 +666,31 @@ var constants = {
                             health: -4
                         }
                     }
-                }
+                },
+                dryBox: {
+                    shortDescription: 'ivory box',
+                    description: 'A box carved from ivory, it is small in size, but it looks extremely dried out.',
+                    take: {
+                        description: 'You take the box carefully, without moving it about too much',
+                        able: true
+                    },
+                    open: {
+                        description: 'In the presence of moisture, the box is sturdier. You open the box gingerly, taking care not to jerk around too much, lest it break',
+                        able: true,
+                        needs: [{
+                                room: 'westRoom',
+                                description: 'You try to open the door, but it crumbles to dust in front of you',
+                            }],
+                        loss: {
+                            to: 'room',
+                            key: 'dryBox'
+                        },
+                        content: [{
+                                description: 'Inside the box you find an ornately carved ivory key',
+                                interactible: ['ivoryKey']
+                            }]
+                    }
+                },
             }
         },],
 };
@@ -1079,6 +1132,7 @@ var Interaction = (function (_super) {
     }
     Interaction.prototype.takeLoss = function () {
         this.loss.giveReward();
+        this.loss.remove();
     };
     Interaction.prototype.loseIfNotAble = function () {
         if (this.loss && !this.able)
@@ -1610,13 +1664,15 @@ var Character = (function (_super) {
             }
             var interactible = Interactible.findOne(inRoom, 'take');
             if (interactible.takeable()) {
-                if (!interactible.take.satisfiedAll())
+                if (!interactible.take.satisfiedAll()) {
+                    interactible.take.takeLoss();
                     return;
+                }
                 interactible.take.take(inRoom);
             }
             else {
                 Game.print(interactible.take.description);
-                interactible.open.loseIfNotAble();
+                interactible.take.loseIfNotAble();
             }
         }
         else {
@@ -1628,8 +1684,10 @@ var Character = (function (_super) {
         if (withPlayer) {
             var interactible = Interactible.findOne(withPlayer);
             if (interactible.putable()) {
-                if (!interactible.put.satisfiedAll())
+                if (!interactible.put.satisfiedAll()) {
+                    interactible.put.takeLoss();
                     return;
+                }
                 interactible.put.put(withPlayer);
             }
             else {
@@ -1649,8 +1707,10 @@ var Character = (function (_super) {
                 return;
             }
             if (interactible.makeable()) {
-                if (!interactible.make.satisfiedAll())
+                if (!interactible.make.satisfiedAll()) {
+                    interactible.make.takeLoss();
                     return;
+                }
                 interactible.make.make(interactible.name);
             }
             else {
@@ -1673,8 +1733,10 @@ var Character = (function (_super) {
         if (inRoom) {
             var interactible = Interactible.findOne(inRoom, 'open');
             if (interactible.openable()) {
-                if (!interactible.open.satisfiedAll())
+                if (!interactible.open.satisfiedAll()) {
+                    interactible.open.takeLoss();
                     return;
+                }
                 interactible.open.open(inRoom);
             }
             else {
@@ -1709,7 +1771,7 @@ var Character = (function (_super) {
             }
             else {
                 Game.print(interactible.kill.description);
-                interactible.open.loseIfNotAble();
+                interactible.kill.loseIfNotAble();
             }
         }
         else {
