@@ -136,6 +136,13 @@ var constants = {
                 put: {
                     description: 'You pour the water out',
                     dissipate: true,
+                    candidates: [{
+                        key: 'fire',
+                        attack: true
+                    },{
+                        key: 'redGlowingBox',
+                        attack: true
+                    }]
                 }
             },
             bottle: {
@@ -1306,9 +1313,6 @@ class Put extends Interaction {
                 this.dissipate = putObject.dissipate;
             this.canString = this.able ? '' : 'cannot ';
             this.description = 'You ' + this.canString + 'throw away ' + name;
-            debug(this.able);
-            debug(this.description);
-            debug(putObject);
             if (putObject.description)
                 this.description = putObject.description;
             if (putObject.candidates)
@@ -1319,8 +1323,8 @@ class Put extends Interaction {
 
     public put(withPlayer: string) {
         for (var candidate of this.candidates) {
+            debug(candidate)
             if (candidate.satisfied()) {
-                // TODO figure this out
                 candidate.giveReward();
                 return;
             }
@@ -1410,7 +1414,6 @@ class Reward {
                     Room.currentRoom().add(x);
                     break;
             }
-        debug(this)
         if (this.execute)
             this.execute();
         player.updateHealth(this.health);
@@ -1447,11 +1450,14 @@ class Candidate extends Reward {
     constructor(candidateObject) {
         super(candidateObject);
         this.attack = false;
+        this.to = 'room';
         if (candidateObject) {
             if (candidateObject.attack)
                 this.attack = candidateObject.attack;
             if (candidateObject.exit)
                 this.exit = new FindExit(candidateObject.exit);
+            if (candidateObject.to)
+                this.to = candidateObject.to;
         }
     }
 
@@ -1459,7 +1465,8 @@ class Candidate extends Reward {
         if (this.attack && this.key)
             player.kill(this.key);
         // TODO figure out if this is in else part
-        super.giveReward();
+        else
+            super.giveReward();
     }
 }
 
@@ -1923,7 +1930,6 @@ class Room extends Unique {
     public enemy() {
         for (var x of this.interactible) {
             var interactible: Interactible = Interactible.findOne(x);
-            debug(interactible.kill)
             if (interactible.killable() && !interactible.kill.hide)
                 return interactible.kill;
         }
@@ -2002,14 +2008,14 @@ class Room extends Unique {
         if (type) {
             for (var element of this.interactible) {
                 var interactible: Interactible = Interactible.findOne(element, type);
-                if (interactible && has(interactible.shortDescription, identifier))
+                if (interactible && (has(interactible.shortDescription, identifier) || identifier==interactible.name))
                     if (interactible[type] && interactible[type].satisfiedAll(true))
                         return element;
             }
         }
         for (var element of this.interactible) {
             var interactible: Interactible = Interactible.findOne(element);
-            if (interactible && has(interactible.shortDescription, identifier))
+            if (interactible && (has(interactible.shortDescription, identifier) || identifier==interactible.name))
                 return element;
         }
         return false;

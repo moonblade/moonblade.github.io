@@ -142,6 +142,13 @@ var constants = {
                     put: {
                         description: 'You pour the water out',
                         dissipate: true,
+                        candidates: [{
+                                key: 'fire',
+                                attack: true
+                            }, {
+                                key: 'redGlowingBox',
+                                attack: true
+                            }]
                     }
                 },
                 bottle: {
@@ -1274,9 +1281,6 @@ var Put = (function (_super) {
                 _this.dissipate = putObject.dissipate;
             _this.canString = _this.able ? '' : 'cannot ';
             _this.description = 'You ' + _this.canString + 'throw away ' + name;
-            debug(_this.able);
-            debug(_this.description);
-            debug(putObject);
             if (putObject.description)
                 _this.description = putObject.description;
             if (putObject.candidates)
@@ -1290,8 +1294,8 @@ var Put = (function (_super) {
     Put.prototype.put = function (withPlayer) {
         for (var _i = 0, _a = this.candidates; _i < _a.length; _i++) {
             var candidate = _a[_i];
+            debug(candidate);
             if (candidate.satisfied()) {
-                // TODO figure this out
                 candidate.giveReward();
                 return;
             }
@@ -1363,7 +1367,6 @@ var Reward = (function () {
                     break;
             }
         }
-        debug(this);
         if (this.execute)
             this.execute();
         player.updateHealth(this.health);
@@ -1396,19 +1399,22 @@ var Candidate = (function (_super) {
     function Candidate(candidateObject) {
         var _this = _super.call(this, candidateObject) || this;
         _this.attack = false;
+        _this.to = 'room';
         if (candidateObject) {
             if (candidateObject.attack)
                 _this.attack = candidateObject.attack;
             if (candidateObject.exit)
                 _this.exit = new FindExit(candidateObject.exit);
+            if (candidateObject.to)
+                _this.to = candidateObject.to;
         }
         return _this;
     }
     Candidate.prototype.giveReward = function () {
         if (this.attack && this.key)
             player.kill(this.key);
-        // TODO figure out if this is in else part
-        _super.prototype.giveReward.call(this);
+        else
+            _super.prototype.giveReward.call(this);
     };
     return Candidate;
 }(Reward));
@@ -1827,7 +1833,6 @@ var Room = (function (_super) {
         for (var _i = 0, _a = this.interactible; _i < _a.length; _i++) {
             var x = _a[_i];
             var interactible = Interactible.findOne(x);
-            debug(interactible.kill);
             if (interactible.killable() && !interactible.kill.hide)
                 return interactible.kill;
         }
@@ -1901,7 +1906,7 @@ var Room = (function (_super) {
             for (var _i = 0, _a = this.interactible; _i < _a.length; _i++) {
                 var element = _a[_i];
                 var interactible = Interactible.findOne(element, type);
-                if (interactible && has(interactible.shortDescription, identifier))
+                if (interactible && (has(interactible.shortDescription, identifier) || identifier == interactible.name))
                     if (interactible[type] && interactible[type].satisfiedAll(true))
                         return element;
             }
@@ -1909,7 +1914,7 @@ var Room = (function (_super) {
         for (var _b = 0, _c = this.interactible; _b < _c.length; _b++) {
             var element = _c[_b];
             var interactible = Interactible.findOne(element);
-            if (interactible && has(interactible.shortDescription, identifier))
+            if (interactible && (has(interactible.shortDescription, identifier) || identifier == interactible.name))
                 return element;
         }
         return false;
