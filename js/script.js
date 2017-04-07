@@ -11,7 +11,6 @@ var __extends = (this && this.__extends) || (function () {
 /// <reference path="js/jquery.d.ts" />
 var constants = {
     defaultPlayerName: 'player',
-    startLocation: 'westRoom',
     endMarker: '.',
     invalidCommand: 'Invalid Command',
     emptyInventory: 'Your inventory is empty',
@@ -22,6 +21,9 @@ var constants = {
     maxHP: 5,
     games: [
         {
+            startLocation: 'westRoom',
+            // NAME OF GAME
+            name: 'zork',
             // ROOMS IN GAME
             roomList: {
                 westRoom: {
@@ -30,13 +32,13 @@ var constants = {
                     interactible: ['platinumKey', 'water'],
                     exits: [{
                             direction: 'east',
-                            to: 'centerRoom'
+                            to: 'centerRoom',
                         }],
                 },
                 centerRoom: {
                     shortDescription: 'center room',
-                    description: 'You are in the very heart of the dungeon, a windowless chamber lit only by the eerie light of glowing fungi high above. There is a prominent trophy stand in the middle, there is no trophy on it.',
-                    interactible: ['copperKey'],
+                    description: 'You are in the very heart of the dungeon, a windowless chamber lit only by the eerie light of glowing fungi high above.',
+                    interactible: ['copperKey', 'trophyStand'],
                     exits: [{
                             direction: 'west',
                             to: 'westRoom'
@@ -138,6 +140,10 @@ var constants = {
                                 description: 'You try to cup the water in your hands, but its not very effective. You realize that you need some kind of container to store water.',
                             }],
                     },
+                    put: {
+                        description: 'You pour the water out',
+                        dissipate: true,
+                    }
                 },
                 bottle: {
                     shortDescription: 'bottle',
@@ -250,6 +256,7 @@ var constants = {
                         able: true,
                         needs: [{
                                 key: 'woodenClub',
+                                noremove: true,
                                 description: 'You try to pry open the box, a rotting splinter pierces your hand',
                                 health: -1
                             }],
@@ -407,7 +414,7 @@ var constants = {
                     take: {
                         description: 'You take the wood piece hoping it will be useful later',
                         able: true,
-                        amount: 3,
+                        amount: 4,
                     }
                 },
                 stake: {
@@ -436,9 +443,85 @@ var constants = {
                                 noremove: true
                             }],
                     }
+                },
+                rope: {
+                    shortDescription: 'rope',
+                    description: 'A rope made from strips of snakeskin.',
+                    alternatives: ['string', 'twine'],
+                    take: {
+                        able: true,
+                    },
+                    make: {
+                        description: 'You cut the snakeskin into narrow strips and weave it into a rope',
+                        able: true,
+                        needs: [{
+                                // TODO define snakeskin
+                                key: 'snakeSkin',
+                                description: 'You dont have anything that could be fashioned into a rope',
+                            }, {
+                                key: 'sword',
+                                description: 'You need something to cut the snake skin with to make it into a rope'
+                            }]
+                    }
+                },
+                cross: {
+                    shortDescription: 'wooden cross',
+                    description: 'A cross made from wood, maybe it could be used as a religious artifact',
+                    alternatives: ['woodcross', 'wood cross', 'woodencross'],
+                    take: {
+                        able: true,
+                    },
+                    make: {
+                        description: 'You break the piece of wood into two, and tie the pieces together with a piece of rope making a cross',
+                        able: true,
+                        needs: [{
+                                key: 'wood',
+                                description: 'You dont have any material to make a cross',
+                            }, {
+                                key: 'sword',
+                                description: 'You dont have anything to cut the wood piece to make a cross',
+                                noremove: true
+                            }, {
+                                key: 'rope',
+                                description: 'You need something to tie the wood pieces with',
+                                noremove: true
+                            }]
+                    }
+                },
+                holyWater: {
+                    shortDescription: 'holy water',
+                    description: 'Holy water, glowing lightly, its power is palpatable ',
+                    alternatives: ['holywater'],
+                    open: {
+                        description: 'Seriously? You\'re trying to open water, did you stop to maybe think about it?'
+                    },
+                    make: {
+                        description: 'You imbue the holyness of the room into the water using the cross. The water starts glowing lightly',
+                        able: true,
+                        needs: [{
+                                key: 'water',
+                                description: 'You dont have anything that can be converted to holy water',
+                            }, {
+                                room: 'eastRoom',
+                                description: 'You try to make holy water, but there is not enough holyness to imbue into the water',
+                            }, {
+                                key: 'cross',
+                                description: 'You try to make holy water, but you dont have anything to direct the holyness of the room to the water',
+                            }]
+                    }
+                },
+                trophyStand: {
+                    shortDescription: 'trophy stand',
+                    description: 'An impossing trophy stand, there seems to be no trophy on it.',
+                    take: {
+                        description: 'It is part of the room.'
+                    },
+                    open: {
+                        description: 'It is completely solid.'
+                    },
                 }
             }
-        }
+        },
     ],
 };
 var variables = {
@@ -460,7 +543,7 @@ var Game = (function () {
             return;
         // Save till endMarker, when endMarker comes, print it on screen
         if (constants.debug)
-            debug("print: " + string);
+            console.log("print: " + string);
         if (string == constants.endMarker) {
             variables.gameText = variables.gameStepText.concat(variables.gameText);
             Game.updateGameScreen();
@@ -469,6 +552,9 @@ var Game = (function () {
         else {
             variables.gameStepText.push(string);
         }
+    };
+    Game.currentGame = function () {
+        return constants.games[variables.thisGame];
     };
     Game.printBold = function (string) {
         Game.print("<b>" + string + "</b>");
@@ -1050,43 +1136,89 @@ var Make = (function (_super) {
         }
         return _this;
     }
-    Make.prototype.make = function (inRoom) {
+    Make.prototype.make = function (makeObject) {
         this.removeRequirements();
         Game.print(this.description);
-        player.addToInventory(inRoom);
+        player.addToInventory(makeObject);
     };
     return Make;
 }(Interaction));
+var Put = (function (_super) {
+    __extends(Put, _super);
+    function Put(putObject, name) {
+        var _this = _super.call(this, putObject, name) || this;
+        _this.able = true;
+        _this.dissipate = false;
+        _this.description = 'You ' + _this.canString + 'put ' + name;
+        _this.candidates = [];
+        if (putObject) {
+            if ('able' in putObject)
+                _this.able = putObject.able;
+            if ('dissipate' in putObject)
+                _this.dissipate = putObject.dissipate;
+            _this.description = 'You ' + _this.canString + 'put ' + name;
+            if (putObject.description)
+                _this.description = putObject.description;
+            if (putObject.candidates)
+                for (var _i = 0, _a = putObject.candidates; _i < _a.length; _i++) {
+                    var candidateObject = _a[_i];
+                    _this.candidates.push(new Candidate(candidateObject));
+                }
+        }
+        return _this;
+    }
+    Put.prototype.put = function (inHnad) {
+        for (var _i = 0, _a = this.candidates; _i < _a.length; _i++) {
+            var candidate = _a[_i];
+            if (candidate.satisfied()) {
+                // TODO figure this out
+                candidate.giveReward();
+            }
+        }
+    };
+    return Put;
+}(Interaction));
 var Reward = (function () {
     function Reward(rewardObject) {
-        if (rewardObject.key)
-            this.key = rewardObject.key;
-        if (rewardObject.room)
-            this.room = rewardObject.room;
-        if (rewardObject.description)
-            this.description = rewardObject.description;
-        if (rewardObject.noremove)
-            this.noremove = rewardObject.noremove;
-        if (rewardObject.interactible)
-            this.interactible = rewardObject.interactible;
-        else
-            this.interactible = [];
-        if (rewardObject.to != undefined)
-            this.to = rewardObject.to;
-        else
-            this.to = 'player';
-        if (rewardObject.health)
-            this.health = rewardObject.health;
-        else
-            this.health = 0;
+        this.health = 0;
+        this.to = 'player';
+        this.interactible = [];
+        if (rewardObject) {
+            if (rewardObject.key)
+                this.key = rewardObject.key;
+            if (rewardObject.room)
+                this.room = rewardObject.room;
+            if (rewardObject.description)
+                this.description = rewardObject.description;
+            if (rewardObject.noremove)
+                this.noremove = rewardObject.noremove;
+            if (rewardObject.interactible)
+                this.interactible = rewardObject.interactible;
+            if (rewardObject.to)
+                this.to = rewardObject.to;
+            if (rewardObject.execute)
+                this.execute = rewardObject.execute;
+            if (rewardObject.health)
+                this.health = rewardObject.health;
+        }
     }
     Reward.prototype.remove = function () {
-        player.removeFromInventory(this.key);
+        if (!this.key)
+            return;
+        switch (this.to) {
+            case 'player':
+                player.removeFromInventory(this.key);
+                break;
+            case 'room':
+                Room.currentRoom().remove(this.key);
+                break;
+        }
     };
     Reward.prototype.satisfied = function () {
-        if (!this.key && !this.room)
-            return true;
-        return player.has(this.key) || Room.currentRoom().is(this.room);
+        return ((!this.key && !this.room)
+            || (player.has(this.key) && this.to == 'player')
+            || (Room.currentRoom().has(this.key) && this.to == 'room')
+            || Room.currentRoom().is(this.room));
     };
     Reward.prototype.giveReward = function () {
         if (this.description)
@@ -1102,10 +1234,32 @@ var Reward = (function () {
                     break;
             }
         }
+        debug(this);
+        if (this.execute)
+            this.execute();
         player.updateHealth(this.health);
     };
     return Reward;
 }());
+var Candidate = (function (_super) {
+    __extends(Candidate, _super);
+    function Candidate(candidateObject) {
+        var _this = _super.call(this, candidateObject) || this;
+        _this.attack = false;
+        if (candidateObject) {
+            if (candidateObject.attack)
+                _this.attack = candidateObject.attack;
+        }
+        return _this;
+    }
+    Candidate.prototype.giveReward = function () {
+        if (this.attack && this.key)
+            player.kill(this.key);
+        // TODO figure out if this is in else part
+        _super.prototype.giveReward.call(this);
+    };
+    return Candidate;
+}(Reward));
 var Weakness = (function (_super) {
     __extends(Weakness, _super);
     function Weakness(weaknessObject) {
@@ -1154,6 +1308,7 @@ var Interactible = (function (_super) {
     }
     Interactible.reset = function () {
         // TODO use jquery to remove this hack
+        Interactible.interactibleListObject = JSON.parse(JSON.stringify(Game.currentGame().interactible));
         for (var key in Interactible.interactibleListObject) {
             var inter = Interactible.interactibleListObject[key];
             var insertInter = new Interactible();
@@ -1168,6 +1323,7 @@ var Interactible = (function (_super) {
             insertInter.open = new Open(inter.open, inter.shortDescription);
             insertInter.kill = new Kill(inter.kill, inter.shortDescription);
             insertInter.make = new Make(inter.make, inter.shortDescription);
+            insertInter.put = new Put(inter.put, inter.shortDescription);
             Interactible.interactibleList[key] = (insertInter);
         }
     };
@@ -1182,6 +1338,9 @@ var Interactible = (function (_super) {
     };
     Interactible.prototype.makeable = function () {
         return this.make && this.make.able;
+    };
+    Interactible.prototype.putable = function () {
+        return this.put && this.put.able;
     };
     Interactible.prototype.is = function (identifier) {
         return this.name == identifier || has(this.shortDescription, identifier);
@@ -1221,7 +1380,7 @@ var Interactible = (function (_super) {
     return Interactible;
 }(Unique));
 // public amount;
-Interactible.interactibleListObject = JSON.parse(JSON.stringify(constants.games[variables.thisGame].interactible));
+Interactible.interactibleListObject = {};
 Interactible.interactibleList = {};
 var Character = (function (_super) {
     __extends(Character, _super);
@@ -1229,7 +1388,7 @@ var Character = (function (_super) {
         var _this = _super.call(this) || this;
         _this.name = name;
         _this.inventory = [];
-        _this.location = constants.startLocation;
+        _this.location = Game.currentGame().startLocation;
         _this.health = constants.maxHP;
         return _this;
     }
@@ -1416,7 +1575,7 @@ var Character = (function (_super) {
         return this.firstMissing(searchArray) == -1;
     };
     Character.prototype.reset = function () {
-        this.location = constants.startLocation;
+        this.location = Game.currentGame().startLocation;
         this.inventory = [];
         this.health = constants.maxHP;
         if (constants.debug) {
@@ -1453,10 +1612,14 @@ var Exit = (function () {
     function Exit(exitObject) {
         this.direction = exitObject.direction;
         this.to = exitObject.to;
-        this.locked = exitObject.locked;
+        this.hidden = false;
         this.description = 'The door is locked';
         if (exitObject.description)
             this.description = exitObject.description;
+        if (exitObject.hidden)
+            this.hidden = exitObject.hidden;
+        if (exitObject.locked)
+            this.locked = exitObject.locked;
     }
     Exit.prototype.isLocked = function () {
         return this.locked != undefined;
@@ -1476,6 +1639,8 @@ var Room = (function (_super) {
         _this.name = name;
         _this.exits = [];
         _this.interactible = [];
+        _this.shortDescription = 'a room';
+        _this.description = 'You\'re in a room';
         return _this;
     }
     Room.currentRoom = function () {
@@ -1574,19 +1739,23 @@ var Room = (function (_super) {
     Room.prototype.findExit = function (direction) {
         for (var _i = 0, _a = this.exits; _i < _a.length; _i++) {
             var exit = _a[_i];
-            if (exit.towards(direction))
+            if (exit.towards(direction) && !exit.hidden)
                 return exit;
         }
         return null;
     };
     Room.reset = function () {
+        Room.roomListObject = JSON.parse(JSON.stringify(Game.currentGame().roomList));
         Room.roomList = {};
         for (var key in Room.roomListObject) {
             var room = new Room(key);
             var thisRoom = Room.roomListObject[key];
-            room.shortDescription = thisRoom.shortDescription;
-            room.description = thisRoom.description;
-            room.interactible = thisRoom.interactible;
+            if (thisRoom.shortDescription)
+                room.shortDescription = thisRoom.shortDescription;
+            if (thisRoom.description)
+                room.description = thisRoom.description;
+            if (thisRoom.interactible)
+                room.interactible = thisRoom.interactible;
             if (thisRoom.exits)
                 for (var _i = 0, _a = thisRoom.exits; _i < _a.length; _i++) {
                     var exitObject = _a[_i];
@@ -1615,9 +1784,12 @@ var Room = (function (_super) {
         // print exits
         if (this.exits != {})
             Game.print(constants.seperator);
-        var exitArray = this.exits.map(function (x) {
-            return x.direction;
-        });
+        var exitArray = [];
+        for (var _b = 0, _c = this.exits; _b < _c.length; _b++) {
+            var exit = _c[_b];
+            if (!exit.hidden)
+                exitArray.push(exit.direction);
+        }
         var exitString = exitArray.join(', ');
         if (exitArray.length > 1) {
             Game.print("There are exits to " + exitString);
@@ -1625,9 +1797,12 @@ var Room = (function (_super) {
         else if (exitArray.length == 1) {
             Game.print("There is an exit to " + exitString);
         }
-        for (var _b = 0, _c = this.exits; _b < _c.length; _b++) {
-            var exit = _c[_b];
-            if (exit.isLocked()) {
+        else if (exitArray.length == 0) {
+            Game.print("There are no exits");
+        }
+        for (var _d = 0, _e = this.exits; _d < _e.length; _d++) {
+            var exit = _e[_d];
+            if (exit.isLocked() && !exit.hidden) {
                 var lockDescription = "The " + exit.direction + " exit is locked";
                 // TODO, add description of door here
                 var door = Interactible.findOne(exit.locked);
@@ -1639,19 +1814,36 @@ var Room = (function (_super) {
     };
     return Room;
 }(Unique));
-Room.roomListObject = JSON.parse(JSON.stringify(constants.games[variables.thisGame].roomList));
+Room.roomListObject = {};
 Room.roomList = {};
 function doCommand() {
     var command = new Command();
     Game.execute(command);
 }
+function changeGame(key) {
+    variables.thisGame = key;
+    Game.reset();
+    Game.execute(new Command('clear'));
+    Game.execute(new Command('look'));
+    for (var gameKey in constants.games) {
+        // TODO use jquery and clean up
+        if (gameKey == key)
+            document.getElementById('game' + gameKey).setAttribute("class", "active");
+        else
+            document.getElementById('game' + gameKey).removeAttribute("class");
+    }
+}
 var player = new Character(constants.defaultPlayerName);
-Game.reset();
-// initial look command
+// initial set up
 window.onload = function () {
-    var command = new Command('look');
-    Game.execute(command);
+    // Add games to nav bar
+    var navbarTabs = document.getElementById('navbar-tabs');
+    for (var key in constants.games) {
+        var game = constants.games[key];
+        navbarTabs.innerHTML += '<li id="game' + key + '" class="" onclick="changeGame(' + key + ')"><a href="#">' + game.name + '</a></li>';
+    }
     // Focus on input
     document.getElementById('controls').innerHTML = Command.generateControlString();
     document.getElementById('command').focus();
+    changeGame(0);
 };

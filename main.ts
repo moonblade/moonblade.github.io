@@ -1,7 +1,6 @@
 /// <reference path="js/jquery.d.ts" />
 var constants = {
     defaultPlayerName: 'player',
-    startLocation: 'westRoom',
     endMarker: '.',
     invalidCommand: 'Invalid Command',
     emptyInventory: 'Your inventory is empty',
@@ -13,8 +12,10 @@ var constants = {
 
 
     games: [
-
         {
+            startLocation: 'westRoom',
+            // NAME OF GAME
+            name: 'zork',
             // ROOMS IN GAME
             roomList: {
                 westRoom: {
@@ -23,13 +24,13 @@ var constants = {
                     interactible: ['platinumKey', 'water'],
                     exits: [{
                         direction: 'east',
-                        to: 'centerRoom'
+                        to: 'centerRoom',
                     }],
                 },
                 centerRoom: {
                     shortDescription: 'center room',
-                    description: 'You are in the very heart of the dungeon, a windowless chamber lit only by the eerie light of glowing fungi high above. There is a prominent trophy stand in the middle, there is no trophy on it.',
-                    interactible: ['copperKey'],
+                    description: 'You are in the very heart of the dungeon, a windowless chamber lit only by the eerie light of glowing fungi high above.',
+                    interactible: ['copperKey', 'trophyStand'],
                     exits: [{
                             direction: 'west',
                             to: 'westRoom'
@@ -133,6 +134,10 @@ var constants = {
                             description: 'You try to cup the water in your hands, but its not very effective. You realize that you need some kind of container to store water.',
                         }],
                     },
+                    put: {
+                        description: 'You pour the water out',
+                        dissipate: true,
+                    }
                 },
                 bottle: {
                     shortDescription: 'bottle',
@@ -245,6 +250,7 @@ var constants = {
                         able: true,
                         needs: [{
                             key: 'woodenClub',
+                            noremove: true,
                             description: 'You try to pry open the box, a rotting splinter pierces your hand',
                             health: -1
                         }],
@@ -403,7 +409,7 @@ var constants = {
                     take: {
                         description: 'You take the wood piece hoping it will be useful later',
                         able: true,
-                        amount: 3,                        
+                        amount: 4,                        
                     }
                 },
                 stake: {
@@ -432,10 +438,85 @@ var constants = {
                             noremove: true
                         }],
                     }
+                },
+                rope: {
+                    shortDescription: 'rope',
+                    description: 'A rope made from strips of snakeskin.',
+                    alternatives: ['string', 'twine'],
+                    take: {
+                        able: true,
+                    },
+                    make: {
+                        description: 'You cut the snakeskin into narrow strips and weave it into a rope',
+                        able: true,
+                        needs: [{
+                            // TODO define snakeskin
+                            key: 'snakeSkin',
+                            description: 'You dont have anything that could be fashioned into a rope',
+                        },{
+                            key: 'sword',
+                            description: 'You need something to cut the snake skin with to make it into a rope'
+                        }]
+                    }
+                },
+                cross: {
+                    shortDescription: 'wooden cross',
+                    description: 'A cross made from wood, maybe it could be used as a religious artifact',
+                    alternatives: ['woodcross','wood cross', 'woodencross'],
+                    take: {
+                        able: true,
+                    },
+                    make: {
+                        description: 'You break the piece of wood into two, and tie the pieces together with a piece of rope making a cross',
+                        able: true,
+                        needs: [{
+                            key: 'wood',
+                            description: 'You dont have any material to make a cross',
+                        },{
+                            key: 'sword',
+                            description: 'You dont have anything to cut the wood piece to make a cross',
+                            noremove: true
+                        },{
+                            key: 'rope',
+                            description: 'You need something to tie the wood pieces with',
+                            noremove: true
+                        }]
+                    }
+                },
+                holyWater: {
+                    shortDescription: 'holy water',
+                    description: 'Holy water, glowing lightly, its power is palpatable ',
+                    alternatives: ['holywater'],
+                    open: {
+                        description: 'Seriously? You\'re trying to open water, did you stop to maybe think about it?'
+                    },
+                    make: {
+                        description: 'You imbue the holyness of the room into the water using the cross. The water starts glowing lightly',
+                        able: true,
+                        needs: [{
+                            key: 'water',
+                            description: 'You dont have anything that can be converted to holy water',
+                        },{
+                            room: 'eastRoom',
+                            description: 'You try to make holy water, but there is not enough holyness to imbue into the water',
+                        },{
+                            key: 'cross',
+                            description: 'You try to make holy water, but you dont have anything to direct the holyness of the room to the water',
+                        }]
+                    }
+                },
+                trophyStand: {
+                    shortDescription: 'trophy stand',
+                    description: 'An impossing trophy stand, there seems to be no trophy on it.',
+                    take: {
+                        description: 'It is part of the room.'
+                    },
+                    open: {
+                        description: 'It is completely solid.'
+                    },
                 }
-
             }
-        }
+        },
     ],
 }
 
@@ -460,7 +541,7 @@ class Game {
             return;
         // Save till endMarker, when endMarker comes, print it on screen
         if (constants.debug)
-            debug("print: " + string);
+            console.log("print: " + string);
         if (string == constants.endMarker) {
             variables.gameText = variables.gameStepText.concat(variables.gameText);
             Game.updateGameScreen();
@@ -468,6 +549,10 @@ class Game {
         } else {
             variables.gameStepText.push(string);
         }
+    }
+
+    static currentGame() {
+        return constants.games[variables.thisGame];
     }
 
     static printBold(string: string) {
@@ -1081,10 +1166,47 @@ class Make extends Interaction {
         }
     }
 
-    public make(inRoom: string) {
+    public make(makeObject: string) {
         this.removeRequirements();
         Game.print(this.description);
-        player.addToInventory(inRoom);
+        player.addToInventory(makeObject);
+    }
+}
+
+
+class Put extends Interaction {
+    candidates: Array<Candidate>;
+    dissipate: boolean;
+    public constructor(putObject, name){
+        super(putObject, name);
+        this.able = true;
+        this.dissipate = false;
+        this.description = 'You ' + this.canString + 'put ' + name;
+        this.candidates = [];
+        if(putObject)
+        {
+            if('able' in putObject)
+                this.able = putObject.able;
+            if('dissipate' in putObject)
+                this.dissipate = putObject.dissipate;
+            this.description = 'You ' + this.canString + 'put ' + name;
+            if(putObject.description)
+                this.description = putObject.description;
+            if(putObject.candidates)
+                for(var candidateObject of putObject.candidates)
+                    this.candidates.push(new Candidate(candidateObject));
+        }
+    }
+
+    public put(inHnad: string){
+        for(var candidate of this.candidates)
+        {
+            if(candidate.satisfied())
+            {
+                // TODO figure this out
+                candidate.giveReward();
+            }
+        }
     }
 }
 
@@ -1095,43 +1217,58 @@ class Reward {
     public description;
     public interactible: Array < string > ;
     public health: number;
+    public execute;
     public noremove: false;
     constructor(rewardObject) {
-        if (rewardObject.key)
-            this.key = rewardObject.key;
+        this.health = 0;
+        this.to = 'player';
+        this.interactible = [];
 
-        if (rewardObject.room)
-            this.room = rewardObject.room;
+        if(rewardObject){
+            if (rewardObject.key)
+                this.key = rewardObject.key;
 
-        if (rewardObject.description)
-            this.description = rewardObject.description;
+            if (rewardObject.room)
+                this.room = rewardObject.room;
 
-        if (rewardObject.noremove)
-            this.noremove = rewardObject.noremove;
+            if (rewardObject.description)
+                this.description = rewardObject.description;
 
-        if (rewardObject.interactible)
-            this.interactible = rewardObject.interactible;
-        else
-            this.interactible = [];
+            if (rewardObject.noremove)
+                this.noremove = rewardObject.noremove;
 
-        if (rewardObject.to != undefined)
-            this.to = rewardObject.to;
-        else
-            this.to = 'player';
+            if (rewardObject.interactible)
+                this.interactible = rewardObject.interactible;
 
-        if (rewardObject.health)
-            this.health = rewardObject.health;
-        else
-            this.health = 0;
+            if (rewardObject.to)
+                this.to = rewardObject.to;
+
+            if (rewardObject.execute)
+                this.execute = rewardObject.execute;
+
+            if (rewardObject.health)
+                this.health = rewardObject.health;
+            }
     }
 
     public remove() {
-        player.removeFromInventory(this.key);
+        if(!this.key)
+            return;
+        switch(this.to)
+        {
+            case 'player':
+                player.removeFromInventory(this.key);
+                break;
+            case 'room':
+                Room.currentRoom().remove(this.key);
+                break;
+        }
     }
     public satisfied() {
-        if (!this.key && !this.room)
-            return true;
-        return player.has(this.key) || Room.currentRoom().is(this.room);
+        return ((!this.key && !this.room)
+        || (player.has(this.key) && this.to=='player') 
+        || (Room.currentRoom().has(this.key) && this.to=='room') 
+        || Room.currentRoom().is(this.room));
     }
 
     public giveReward() {
@@ -1147,7 +1284,30 @@ class Reward {
                     Room.currentRoom().add(x);
                     break;
             }
+            debug(this)
+        if(this.execute)
+            this.execute();
         player.updateHealth(this.health);
+    }
+}
+
+class Candidate extends Reward{
+    public attack: boolean;
+    constructor(candidateObject){
+        super(candidateObject);
+        this.attack = false;
+        if(candidateObject)
+        {
+            if(candidateObject.attack)
+                this.attack = candidateObject.attack;
+        }
+    }
+
+    public giveReward(){
+        if(this.attack && this.key)
+            player.kill(this.key);
+        // TODO figure out if this is in else part
+        super.giveReward();
     }
 }
 
@@ -1203,8 +1363,9 @@ class Interactible extends Unique{
     public open: Open;
     public kill: Kill;
     public make: Make;
+    public put: Put;
     // public amount;
-    static interactibleListObject = JSON.parse(JSON.stringify(constants.games[variables.thisGame].interactible));
+    static interactibleListObject = {};
     static interactibleList = {};
 
     constructor() {
@@ -1215,6 +1376,7 @@ class Interactible extends Unique{
 
     static reset() {
         // TODO use jquery to remove this hack
+        Interactible.interactibleListObject = JSON.parse(JSON.stringify(Game.currentGame().interactible));
         for (var key in Interactible.interactibleListObject) {
             var inter = Interactible.interactibleListObject[key];
             var insertInter = new Interactible();
@@ -1233,6 +1395,7 @@ class Interactible extends Unique{
             insertInter.open = new Open(inter.open, inter.shortDescription);
             insertInter.kill = new Kill(inter.kill, inter.shortDescription);
             insertInter.make = new Make(inter.make, inter.shortDescription);
+            insertInter.put = new Put(inter.put, inter.shortDescription);
 
             Interactible.interactibleList[key] = (insertInter);
         }
@@ -1252,6 +1415,10 @@ class Interactible extends Unique{
 
     public makeable() {
         return this.make && this.make.able;
+    }
+
+    public putable() {
+        return this.put && this.put.able;
     }
 
     public is(identifier: string) {
@@ -1304,7 +1471,7 @@ class Character extends Unique {
         super();
         this.name = name;
         this.inventory = [];
-        this.location = constants.startLocation;
+        this.location = Game.currentGame().startLocation;
         this.health = constants.maxHP;
     }
 
@@ -1500,7 +1667,7 @@ class Character extends Unique {
 
 
     public reset() {
-        this.location = constants.startLocation;
+        this.location = Game.currentGame().startLocation;
         this.inventory = [];
         this.health = constants.maxHP;
         if (constants.debug) {
@@ -1538,14 +1705,19 @@ class Exit {
     direction: string;
     to: string;
     locked: string;
+    hidden: boolean;
     constructor(exitObject) {
         this.direction = exitObject.direction;
         this.to = exitObject.to;
-        this.locked = exitObject.locked;
+        this.hidden = false;
         
         this.description = 'The door is locked';
         if(exitObject.description)
             this.description = exitObject.description;
+        if(exitObject.hidden)
+            this.hidden = exitObject.hidden;
+        if(exitObject.locked)
+            this.locked = exitObject.locked;
     }
 
     public isLocked() {
@@ -1568,7 +1740,7 @@ class Room extends Unique {
     interactible: Array < string > ;
 
 
-    static roomListObject = JSON.parse(JSON.stringify(constants.games[variables.thisGame].roomList));
+    static roomListObject = {};
     static roomList = {};
 
     static currentRoom() {
@@ -1675,19 +1847,23 @@ class Room extends Unique {
 
     public findExit(direction: string) {
         for (var exit of this.exits)
-            if (exit.towards(direction))
+            if (exit.towards(direction) && !exit.hidden)
                 return exit;
         return null;
     }
 
     static reset() {
+        Room.roomListObject = JSON.parse(JSON.stringify(Game.currentGame().roomList));
         Room.roomList = {};
         for (var key in Room.roomListObject) {
             var room = new Room(key);
             var thisRoom = Room.roomListObject[key];
-            room.shortDescription = thisRoom.shortDescription;
-            room.description = thisRoom.description;
-            room.interactible = thisRoom.interactible;
+            if(thisRoom.shortDescription)
+                room.shortDescription = thisRoom.shortDescription;
+            if(thisRoom.description)
+                room.description = thisRoom.description;
+            if(thisRoom.interactible)
+                room.interactible = thisRoom.interactible;
             if(thisRoom.exits)
                 for (var exitObject of thisRoom.exits) {
                     var exit = new Exit(exitObject);
@@ -1696,11 +1872,14 @@ class Room extends Unique {
             Room.roomList[key] = room;
         }
     }
+
     constructor(name: string) {
         super();
         this.name = name;
         this.exits = [];
         this.interactible = [];
+        this.shortDescription = 'a room';
+        this.description = 'You\'re in a room';
     }
 
     public is(name: string) {
@@ -1722,17 +1901,22 @@ class Room extends Unique {
         // print exits
         if (this.exits != {})
             Game.print(constants.seperator);
-        var exitArray = this.exits.map(x => {
-            return x.direction;
-        });
+        var exitArray = [];
+        for(var exit of this.exits){
+            if(!exit.hidden)
+                exitArray.push(exit.direction);
+        }
         var exitString = exitArray.join(', ');
         if (exitArray.length > 1) {
             Game.print("There are exits to " + exitString)
         } else if (exitArray.length == 1) {
             Game.print("There is an exit to " + exitString)
+        } else if (exitArray.length == 0) {
+            Game.print("There are no exits");
         }
+
         for (var exit of this.exits) {
-            if (exit.isLocked()) {
+            if (exit.isLocked() && !exit.hidden) {
                 var lockDescription: string = "The " + exit.direction + " exit is locked";
                 // TODO, add description of door here
                 var door:Interactible = Interactible.findOne(exit.locked);
@@ -1749,14 +1933,36 @@ function doCommand() {
     Game.execute(command);
 }
 
-let player = new Character(constants.defaultPlayerName);
-Game.reset();
 
-// initial look command
+function changeGame(key){
+    variables.thisGame = key;
+    Game.reset();
+    Game.execute(new Command('clear'));
+    Game.execute(new Command('look'));
+
+    for(var gameKey in constants.games)
+    {
+        // TODO use jquery and clean up
+        if(gameKey == key)
+            ( < HTMLElement > document.getElementById('game'+gameKey)).setAttribute("class","active");
+        else
+            ( < HTMLElement > document.getElementById('game'+gameKey)).removeAttribute("class");
+    }
+}
+let player = new Character(constants.defaultPlayerName);
+
+// initial set up
 window.onload = () => {
-    var command = new Command('look');
-    Game.execute(command);
+    
+    // Add games to nav bar
+    var navbarTabs = ( < HTMLElement > document.getElementById('navbar-tabs'));
+    for(var key in constants.games)
+    {  
+        var game = constants.games[key];
+        navbarTabs.innerHTML += '<li id="game'+key+'" class="" onclick="changeGame('+key+')"><a href="#">'+game.name+'</a></li>';
+    }
     // Focus on input
     ( < HTMLElement > document.getElementById('controls')).innerHTML = Command.generateControlString();
     ( < HTMLInputElement > document.getElementById('command')).focus();
+    changeGame(0);
 }
