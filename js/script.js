@@ -18,12 +18,11 @@ var constants = {
     debug: true,
     easterEgg: ['go up', 'go up', 'go down', 'go down', 'left ', 'right ', 'left ', 'right ', 'b ', 'a '],
     seperator: '..',
-    maxHP: 5,
-    games: [
-        {
+    maxHP: 10,
+    games: [{
             startLocation: 'westRoom',
             // NAME OF GAME
-            name: 'zork',
+            name: 'zorkish',
             // ROOMS IN GAME
             roomList: {
                 westRoom: {
@@ -101,7 +100,7 @@ var constants = {
                 treasureRoom: {
                     shortDescription: 'treasure room',
                     description: 'You are in a room filled with treasures of all kinds imaginable, there are mounds of glittering gold and shining diamonds in a huge pile',
-                    interactible: ['platinumBox', 'decayingBox'],
+                    interactible: ['platinumBox', 'decayingBox', 'goldCoin'],
                     exits: [{
                             direction: 'west',
                             to: 'northRoom',
@@ -252,7 +251,7 @@ var constants = {
                         }
                     },
                     open: {
-                        description: 'You smash the box with the wooden club, the club breaks as well',
+                        description: 'You smash the box with the wooden club',
                         able: true,
                         needs: [{
                                 key: 'woodenClub',
@@ -309,18 +308,18 @@ var constants = {
                         weakness: [{
                                 key: 'sword',
                                 description: 'The scorpion strikes, you sidestep the attack and drive your sword through it. It thrashes around for sometime and finally dies.',
-                                health: -1,
+                                health: -2,
                                 attack: -1,
                                 isWeakness: true,
-                                weaknessDescription: 'You take a swing at the scorpion with the sword, but the wily creature sidesteps you',
+                                weaknessDescription: 'You take a swing at the scorpion with the sword, but the wily creature jerks away and stings you',
                             }],
                         loot: [{
                                 description: 'From the hole in its stomach, a key falls to the floor, intrigued you take it.',
                                 interactible: ['graniteKey'],
                             }],
                         loss: {
-                            description: 'The scorpion strikes, you try to sidestep it and catch its tail with your bare hands, but it is faster than you and strikes you square in your heart',
-                            health: -1,
+                            description: 'The scorpion strikes, you try to avoid it and catch its tail with your bare hands, but it is faster than you and stings you square in your heart',
+                            health: -2,
                         },
                     }
                 },
@@ -333,7 +332,10 @@ var constants = {
                 },
                 graniteKey: {
                     shortDescription: 'granite key',
-                    description: 'A key fashioned from granite, it must have been incredibly difficult to craft.'
+                    description: 'A key fashioned from granite, it must have been incredibly difficult to craft.',
+                    take: {
+                        able: true
+                    }
                 },
                 ivoryKey: {
                     shortDescription: 'ivory key',
@@ -391,8 +393,7 @@ var constants = {
                     shortDescription: 'fire',
                     description: 'A burning fire, taller than you. It emits of waves of heat making it really hard to go near it.',
                     open: {
-                        description: 'You try to open up the fire, wonder how. You get burned in the process',
-                        able: false,
+                        description: 'You try to open up the fire, You realise mid action, that it was a stupid move. You get burned in the process',
                         loss: {
                             health: -1
                         }
@@ -404,8 +405,35 @@ var constants = {
                         needs: [{
                                 key: 'wood',
                                 description: 'You try to take the fire by cupping it in your hands, an admittedly stupid move, your hands get burned',
-                                health: -1,
+                                health: -2,
                             }],
+                    },
+                    kill: {
+                        able: true,
+                        health: 1,
+                        hide: true,
+                        weakness: [{
+                                key: 'water',
+                                description: 'You pour the water over the fire, it sizzles and finally dies.',
+                                health: -2,
+                                attack: -1,
+                                noremove: false
+                            }, {
+                                key: 'holyWater',
+                                description: 'You pour the water over the fire, it sizzles and finally dies.',
+                                health: -2,
+                                attack: -1,
+                                noremove: false
+                            }],
+                        loot: [{
+                                description: 'Inside the dying embers of the fire, you see a red glowing box.',
+                                interactible: ['redGlowingBox'],
+                                to: 'room',
+                            }],
+                        loss: {
+                            description: 'You try to stomp out the tall column of flame with your feet. You get massive burns on your feet.',
+                            health: -2,
+                        },
                     }
                 },
                 wood: {
@@ -490,7 +518,7 @@ var constants = {
                 },
                 holyWater: {
                     shortDescription: 'holy water',
-                    description: 'Holy water, glowing lightly, its power is palpatable ',
+                    description: 'Holy water, glowing lightly, its power is palpable ',
                     alternatives: ['holywater'],
                     open: {
                         description: 'Seriously? You\'re trying to open water, did you stop to maybe think about it?'
@@ -508,6 +536,10 @@ var constants = {
                                 key: 'cross',
                                 description: 'You try to make holy water, but you dont have anything to direct the holyness of the room to the water',
                             }]
+                    },
+                    put: {
+                        description: 'You pour the holy water out',
+                        dissipate: true,
                     }
                 },
                 trophyStand: {
@@ -519,10 +551,88 @@ var constants = {
                     open: {
                         description: 'It is completely solid.'
                     },
+                },
+                redGlowingBox: {
+                    shortDescription: 'red glowing box',
+                    description: 'A red hot glowing box, standing near it, you feel the heat radiating from it. A faint sizzling can be heard',
+                    take: {
+                        description: 'You try to take the hot box with your bare hands, they get burned badly.',
+                        loss: {
+                            health: -2
+                        }
+                    },
+                    open: {
+                        description: 'You try to pry open the red hot glowing box, as soon as you touch it, your hands burn and peel away.',
+                        loss: {
+                            health: -2
+                        }
+                    },
+                    kill: {
+                        able: true,
+                        hide: true,
+                        loss: {
+                            description: 'You try to cool the box by stomping it with your feet. You sustain heavy burns on your feet.',
+                            health: -2
+                        },
+                        weakness: [{
+                                key: 'water',
+                                description: 'You pour water on the red hot box, it sizzles and cools down',
+                                attack: -1,
+                                noremove: false
+                            }, {
+                                key: 'holyWater',
+                                description: 'You pour water on the red hot box, it sizzles and cools down',
+                                attack: -1,
+                                noremove: false,
+                            }],
+                        loot: [{
+                                description: 'The box cools down to reveal a metallic box.',
+                                interactible: ['metalBox'],
+                                to: 'room'
+                            }]
+                    }
+                },
+                metalBox: {
+                    shortDescription: 'metal box',
+                    description: 'A box made of some metal, it was red hot some time ago and some heat is left. The lock mechanism has an intricate carving on of an elephant raising its tusk on it.',
+                    take: {
+                        description: 'You try to take the box, but you underestimated the weight of the metal box. You break your back',
+                        loss: {
+                            health: -1
+                        }
+                    },
+                    open: {
+                        description: 'You open the metal box with your key, the inside of it seems empty.',
+                        able: true,
+                        needs: [{
+                                key: 'ivoryKey',
+                                description: 'You try to pry open the lock with your fingers, but its too strong'
+                            }],
+                        content: [{
+                                description: 'On closer inspection you find a stone cut key in a corner of the box',
+                                interactible: ['rockKey']
+                            }]
+                    }
+                },
+                rockKey: {
+                    shortDescription: 'rock cut key',
+                    description: 'A rough key that seems to be made from a piece of rock. Its shoddy workmanship is clear in your hands.',
+                    take: {
+                        able: true
+                    },
+                },
+                goldCoin: {
+                    shortDescription: 'gold coins',
+                    description: 'Some gold coins that look shiny and inviting, it could be used to pay for something.',
+                    take: {
+                        description: 'You take some coins in you hand, You suddenly feel weak. The coins were cursed.',
+                        loss: {
+                            health: -4
+                        }
+                    }
                 }
             }
-        },
-    ],
+        },],
 };
 var variables = {
     gameStepText: [],
@@ -830,6 +940,9 @@ Command.commands = {
         alternatives: ['place', 'keep', 'fix', 'pour'],
         extra: '[object]',
         missedExtra: 'Please specify what to put',
+        execute: function (command) {
+            player.put(command.object);
+        }
     },
     'open': {
         desc: 'Try to open the object',
@@ -970,11 +1083,11 @@ var Interaction = (function (_super) {
             reward.giveReward();
         }
     };
-    Interaction.prototype.satisfiedAll = function (silent) {
+    Interaction.prototype.satisfiedAll = function (silentWithoutReward) {
         for (var _i = 0, _a = this.needs; _i < _a.length; _i++) {
             var reward = _a[_i];
             if (!reward.satisfied()) {
-                if (!silent)
+                if (!silentWithoutReward)
                     reward.giveReward();
                 return false;
             }
@@ -993,8 +1106,7 @@ var Interaction = (function (_super) {
     Interaction.prototype.removeRequirements = function () {
         for (var _i = 0, _a = this.needs; _i < _a.length; _i++) {
             var reward = _a[_i];
-            if (!reward.noremove)
-                reward.remove();
+            reward.remove();
         }
     };
     return Interaction;
@@ -1074,13 +1186,16 @@ var Kill = (function (_super) {
         _this.description = 'You ' + _this.canString + 'kill ' + name;
         _this.removeWeakness = false;
         _this.health = 1;
-        _this.health = 1;
+        _this.hide = false;
+        _this.maxHealth = 1;
         _this.weakness = [];
         if (openObject) {
             if (openObject.description)
                 _this.description = openObject.description;
             if (openObject.removeWeakness)
                 _this.removeWeakness = openObject.removeWeakness;
+            if (openObject.hide)
+                _this.hide = openObject.hide;
             if (openObject.health) {
                 _this.health = openObject.health;
                 _this.maxHealth = openObject.health;
@@ -1149,14 +1264,19 @@ var Put = (function (_super) {
         var _this = _super.call(this, putObject, name) || this;
         _this.able = true;
         _this.dissipate = false;
-        _this.description = 'You ' + _this.canString + 'put ' + name;
+        _this.canString = _this.able ? '' : 'cannot ';
+        _this.description = 'You ' + _this.canString + 'throw away ' + name;
         _this.candidates = [];
         if (putObject) {
             if ('able' in putObject)
                 _this.able = putObject.able;
             if ('dissipate' in putObject)
                 _this.dissipate = putObject.dissipate;
-            _this.description = 'You ' + _this.canString + 'put ' + name;
+            _this.canString = _this.able ? '' : 'cannot ';
+            _this.description = 'You ' + _this.canString + 'throw away ' + name;
+            debug(_this.able);
+            debug(_this.description);
+            debug(putObject);
             if (putObject.description)
                 _this.description = putObject.description;
             if (putObject.candidates)
@@ -1167,13 +1287,19 @@ var Put = (function (_super) {
         }
         return _this;
     }
-    Put.prototype.put = function (inHnad) {
+    Put.prototype.put = function (withPlayer) {
         for (var _i = 0, _a = this.candidates; _i < _a.length; _i++) {
             var candidate = _a[_i];
             if (candidate.satisfied()) {
                 // TODO figure this out
                 candidate.giveReward();
+                return;
             }
+        }
+        player.removeFromInventory(withPlayer);
+        Game.print(this.description);
+        if (!this.dissipate) {
+            Room.currentRoom().add(withPlayer);
         }
     };
     return Put;
@@ -1181,6 +1307,7 @@ var Put = (function (_super) {
 var Reward = (function () {
     function Reward(rewardObject) {
         this.health = 0;
+        this.noremove = false;
         this.to = 'player';
         this.interactible = [];
         if (rewardObject) {
@@ -1203,6 +1330,8 @@ var Reward = (function () {
         }
     }
     Reward.prototype.remove = function () {
+        if (this.noremove)
+            return;
         if (!this.key)
             return;
         switch (this.to) {
@@ -1215,10 +1344,10 @@ var Reward = (function () {
         }
     };
     Reward.prototype.satisfied = function () {
-        return ((!this.key && !this.room)
-            || (player.has(this.key) && this.to == 'player')
-            || (Room.currentRoom().has(this.key) && this.to == 'room')
-            || Room.currentRoom().is(this.room));
+        return ((!this.key && !this.room) ||
+            (player.has(this.key) && this.to == 'player') ||
+            (Room.currentRoom().has(this.key) && this.to == 'room') ||
+            Room.currentRoom().is(this.room));
     };
     Reward.prototype.giveReward = function () {
         if (this.description)
@@ -1241,6 +1370,27 @@ var Reward = (function () {
     };
     return Reward;
 }());
+var FindExit = (function () {
+    function FindExit(exitObject) {
+        this.room = '';
+        this.direction = '';
+        if (exitObject) {
+            if (exitObject.room)
+                this.room = exitObject.room;
+            if (exitObject.direction)
+                this.direction = exitObject.direction;
+        }
+    }
+    FindExit.prototype.unhide = function () {
+        var room = Room.findOne(this.room);
+        if (room) {
+            var exit = room.findExit(this.direction, true);
+            if (exit)
+                exit.unhide();
+        }
+    };
+    return FindExit;
+}());
 var Candidate = (function (_super) {
     __extends(Candidate, _super);
     function Candidate(candidateObject) {
@@ -1249,6 +1399,8 @@ var Candidate = (function (_super) {
         if (candidateObject) {
             if (candidateObject.attack)
                 _this.attack = candidateObject.attack;
+            if (candidateObject.exit)
+                _this.exit = new FindExit(candidateObject.exit);
         }
         return _this;
     }
@@ -1266,9 +1418,12 @@ var Weakness = (function (_super) {
         var _this = _super.call(this, weaknessObject) || this;
         _this.isWeakness = true;
         _this.attack = 1;
+        _this.noremove = true;
         _this.weaknessDescription = 'The same trick won\' work twice';
         if ('isWeakness' in weaknessObject)
             _this.isWeakness = weaknessObject.isWeakness;
+        if ('noremove' in weaknessObject)
+            _this.noremove = weaknessObject.noremove;
         if (weaknessObject.attack)
             _this.attack = weaknessObject.attack;
         if (weaknessObject.weaknessDescription)
@@ -1290,6 +1445,7 @@ var Weakness = (function (_super) {
             if (enemy.kill.removeWeakness) {
                 this.isWeakness = false;
             }
+            this.remove();
         }
         else {
             Game.print(this.weaknessDescription);
@@ -1461,6 +1617,24 @@ var Character = (function (_super) {
             Game.print("Could not find " + identifier + " here");
         }
     };
+    Character.prototype.put = function (identifier) {
+        var withPlayer = player.has(identifier);
+        if (withPlayer) {
+            var interactible = Interactible.findOne(withPlayer);
+            if (interactible.putable()) {
+                if (!interactible.put.satisfiedAll())
+                    return;
+                interactible.put.put(withPlayer);
+            }
+            else {
+                Game.print(interactible.put.description);
+                interactible.put.loseIfNotAble();
+            }
+        }
+        else {
+            Game.print("You don't have " + identifier + " with you.");
+        }
+    };
     Character.prototype.make = function (identifier) {
         var interactible = Interactible.findOne(identifier, 'make');
         if (interactible) {
@@ -1627,6 +1801,9 @@ var Exit = (function () {
     Exit.prototype.towards = function (direction) {
         return this.direction == direction;
     };
+    Exit.prototype.unhide = function () {
+        this.hidden = false;
+    };
     Exit.prototype.unlock = function () {
         this.locked = undefined;
     };
@@ -1650,7 +1827,8 @@ var Room = (function (_super) {
         for (var _i = 0, _a = this.interactible; _i < _a.length; _i++) {
             var x = _a[_i];
             var interactible = Interactible.findOne(x);
-            if (interactible.killable())
+            debug(interactible.kill);
+            if (interactible.killable() && !interactible.kill.hide)
                 return interactible.kill;
         }
     };
@@ -1736,10 +1914,10 @@ var Room = (function (_super) {
         }
         return false;
     };
-    Room.prototype.findExit = function (direction) {
+    Room.prototype.findExit = function (direction, includeHidden) {
         for (var _i = 0, _a = this.exits; _i < _a.length; _i++) {
             var exit = _a[_i];
-            if (exit.towards(direction) && !exit.hidden)
+            if (exit.towards(direction) && (!exit.hidden || includeHidden))
                 return exit;
         }
         return null;
