@@ -69,6 +69,19 @@ var constants = {
                             locked: 'stoneDoor'
                         }],
                 },
+                cavern: {
+                    shortDescription: 'cavern',
+                    description: 'You are in a cavern, the ceiling is at least ten foot high, on the wall there is a drawing of a man hunting a dear and another roasting it.',
+                    interactible: ['spider', 'juttingRock'],
+                    exits: [{
+                            direction: 'north',
+                            to: 'eastRoom'
+                        }, {
+                            direction: 'down',
+                            to: 'undergroundPool',
+                            locked: 'greenDoor'
+                        }]
+                },
                 northRoom: {
                     shortDescription: 'north room',
                     description: 'You are in a dimly room littered with skulls. It has an eerie quiteness about it, the sound of death',
@@ -312,6 +325,12 @@ var constants = {
                 scorpion: {
                     shortDescription: 'scorpion',
                     description: 'A menacing scorpion with its stinger raised, poised to strike.',
+                    take: {
+                        description: 'You try to coax the scorpion into your hand. It jumps into your hand, and stings you',
+                        loss: {
+                            health: -2
+                        }
+                    },
                     kill: {
                         able: true,
                         removeWeakness: true,
@@ -337,14 +356,60 @@ var constants = {
                         },
                     }
                 },
+                spider: {
+                    shortDescription: 'huge spider',
+                    description: 'A behemoth of a spider, It covers the entire room. completely covered in hair, its eight eyes track you through the cavern',
+                    take: {
+                        description: 'You try to take a spider bigger than you. It sits on top of you and crushes you',
+                        loss: {
+                            health: -3
+                        }
+                    },
+                    kill: {
+                        able: true,
+                        removeWeakness: true,
+                        health: 3,
+                        weakness: [{
+                                key: 'sword',
+                                isWeakness: false,
+                                health: -3,
+                                weaknessDescription: 'You swipe at the spider with your sword, but it quickly jumps away, and catches you in its webbing. You cut through the webbing and get away, but not before getting bitten',
+                            }, {
+                                key: 'woodenClub',
+                                isWeakness: true,
+                                description: 'The spider approaches you, but you were ready with the wooden club, You smack it right on its head mid jump. It gets knocked back. Dazed.',
+                                health: -3,
+                                attack: -1,
+                                weaknessDescription: 'The spider approaches you again, You swing at it with the club, but the spider anticipated the attack and evades it. It crushes you with its legs.'
+                            }, {
+                                key: 'fire',
+                                isWeakness: true,
+                                attack: -2,
+                                health: -3,
+                                description: 'The spider shoots its web at you, but you burn it away with fire. You set fire to the spider, the hair on it quickly catches fire and burns it to a crisp.',
+                                weaknessDescription: 'You push the fire towards the spider again. But the creature is afraid of it. Quiker than your eye could follow, it shoots a web as distraction and binds you with another web. It bites you painfully.'
+                            }],
+                        loot: [{
+                                description: 'From inside the spiders mouth. The remains of its last meal fall out. You hear a clink. Approaching it, you find an iron key',
+                                interactible: ['ironKey']
+                            }],
+                        loss: [{
+                                description: 'The spider shoots its web at you and you\'re too slow to avoid it. You wriggle free, but get bitten.'
+                            }]
+                    }
+                },
                 scorpionCarcass: {
                     shortDescription: 'scorpion carcass',
                     description: 'The carcass of the scorpion you killed, it twitches occasionally.',
                     take: {
-                        description: 'You try to take the carcass, the stinger of the scorpion carcass twiches unexpectedly, and strikes you',
+                        description: 'You try to take the carcass, the stinger of the scorpion carcass twiches unexpectedly, and stings you',
                         loss: {
                             health: -2
                         }
+                    },
+                    open: {
+                        able: true,
+                        description: 'You take your sword and cut open the carcass of the scorpion hoping for some answers to its ferocity, you find none'
                     }
                 },
                 sword: {
@@ -364,6 +429,13 @@ var constants = {
                 ivoryKey: {
                     shortDescription: 'ivory key',
                     description: 'A key carved from ivory, it must have taken a lot of time and effor to craft.',
+                    take: {
+                        able: true
+                    }
+                },
+                emeraldKey: {
+                    shortDescription: 'emeraldKey',
+                    description: 'A key cut from glistening emerald, It shines under the light.',
                     take: {
                         able: true
                     }
@@ -410,6 +482,21 @@ var constants = {
                                 key: 'ironKey',
                                 description: 'You try to break the door open with a flying shove with your shoulder. You hurt your shoulder badly.',
                                 health: -1
+                            }]
+                    }
+                },
+                greenDoor: {
+                    shortDescription: 'green door',
+                    description: 'A green glowing door. Circular in shape, it looks to be made from some kind of stone. "Pay your respects with yellow", an incription on it says.',
+                    open: {
+                        able: true,
+                        description: 'You rotate the door till you find a keyhole and insert the key into it. A single coin slot appears. You insert your coin into the slot. The door dissolves into a green puddle',
+                        needs: [{
+                                key: 'emeraldKey',
+                                description: 'You rotate the door and see a keyhole, you rotate the door somemore hoping to see a hinge that you could lever around. You find nothing',
+                            }, {
+                                key: 'goldCoin',
+                                description: 'You rotate the door to find a keyhole and insert the key into it. A single slot appears, You dont have anything to put in it',
                             }]
                     }
                 },
@@ -588,6 +675,16 @@ var constants = {
                         description: 'It is completely solid.'
                     },
                 },
+                juttingRock: {
+                    shortDescription: 'jutting rock piece',
+                    description: 'A piece of rock seems to extend from the cave right over the green door. ',
+                    take: {
+                        description: 'It is part of the cave'
+                    },
+                    open: {
+                        description: 'You cant open part of the cave'
+                    }
+                },
                 redGlowingBox: {
                     shortDescription: 'red glowing box',
                     description: 'A red hot glowing box, standing near it, you feel the heat radiating from it. A faint sizzling can be heard',
@@ -661,10 +758,13 @@ var constants = {
                     shortDescription: 'gold coins',
                     description: 'Some gold coins that look shiny and inviting, it could be used to pay for something.',
                     take: {
-                        description: 'You take some coins in you hand, You suddenly feel weak. The coins were cursed.',
-                        loss: {
-                            health: -4
-                        }
+                        able: true,
+                        description: 'You wet your hands with holy water and take the coins, they dont harm you any more.',
+                        needs: [{
+                                key: 'holyWater',
+                                description: 'You take some coins in you hand, You suddenly feel weak. The coins were cursed.',
+                                health: -4
+                            }],
                     }
                 },
                 dryBox: {
