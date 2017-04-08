@@ -145,6 +145,16 @@ var constants = {
                             direction: 'east',
                             to: 'southRoom'
                         }]
+                },
+                undergroundPool: {
+                    shortDescription: 'dark cave',
+                    description: 'You are in a dark cave, in the flickering light of the flame you see a pool of water, the ceiling is covered with bats. You see two glowing red eyes looking directly at you',
+                    interactible: ['vampire'],
+                    exits: [{
+                            direction: 'up',
+                            to: 'cavern',
+                            hidden: true,
+                        }]
                 }
             },
             // INTERACTIBLES IN GAME
@@ -311,6 +321,44 @@ var constants = {
                         description: 'You take the silver key, and place it in your pocket for later use.',
                         able: true
                     },
+                    put: {
+                        able: true,
+                        candidates: [{
+                                key: 'fire',
+                                description: 'You drop the silver key into the fire.',
+                                interactible: ['liquidSilver'],
+                                to: 'room'
+                            }]
+                    }
+                },
+                liquidSilver: {
+                    shortDescription: 'liquid silver',
+                    description: 'Silver melted with heat of the fire, its in a puddle on the ground',
+                    take: {
+                        description: 'You try to take the molten liquid in your hands, Your hands get burned off',
+                        loss: {
+                            health: -2
+                        }
+                    }
+                },
+                silverSword: {
+                    shortDescription: 'silver sword',
+                    description: 'Silver coated sword, made by coating your sword with a layer of liquid silver.',
+                    take: {
+                        able: true,
+                    },
+                    make: {
+                        description: 'You coat the liquid on the blade of your sword, making it near invincible',
+                        able: true,
+                        needs: [{
+                                key: 'sword',
+                                description: 'You need to have sword to coat it and make silver sword',
+                            }, {
+                                key: 'liquidSilver',
+                                to: 'room',
+                                description: 'You cant make silver sword without coating silver, You need the silver to be in coatable form'
+                            }],
+                    }
                 },
                 goldKey: {
                     shortDescription: 'gold key',
@@ -368,6 +416,78 @@ var constants = {
                             description: 'The scorpion strikes, you try to avoid it and catch its tail with your bare hands, but it is faster than you and stings you square in your heart',
                             health: -2,
                         },
+                    }
+                },
+                vampire: {
+                    shortDescription: 'vampire',
+                    description: 'With a black cloak hiding a muscular body, a pale face wearing a menacing grin, he is truly a being to invoke terror',
+                    take: {
+                        description: 'You tried to take the vampire into your hands, He looks at you with hunger and bites you.',
+                        loss: {
+                            health: -7
+                        }
+                    },
+                    kill: {
+                        able: true,
+                        health: 8,
+                        removeWeakness: true,
+                        weakness: [{
+                                key: 'holyWater',
+                                description: 'You spray the holy water on his face, blinding him momentarily and burning his skin off',
+                                attack: -2,
+                                health: -8,
+                                noremove: false,
+                                weaknessDescription: 'You throw the holy water on his face, quick as lightning, he maneuvers out of the way. He snaps your neck.'
+                            }, {
+                                key: 'garlicMoss',
+                                description: 'You toss the moss smelling of garlic in the general direction of the vampire, the smells wafts into the room. He is visibly distressed by it, breaking into a fit of coughing and sneezing with watery eyes',
+                                attack: -1,
+                                health: -8,
+                                noremove: false,
+                                weaknessDescription: 'You toss the moss onto his face, but he catches it with a polythene bag and sets it aside as if it were nothing. He gets closer and bites you.'
+                            }, {
+                                key: 'stake',
+                                description: 'Taking the stake with both hands, you thrust it into the heart of the vampire, He screams and falls down. He tries to take the stake out, burning his hands in the process.',
+                                attack: -1,
+                                health: -8,
+                                noremove: false,
+                                weaknessDescription: 'You throw the stake hoping to impale him with it, but it does nothing but bounce harmlessly off of him.',
+                            }, {
+                                key: 'silverSword',
+                                description: 'Taking the sword in both hands, you swing it at his head, It strikes him on the neck. He gets burned and screms in agony.',
+                                attack: -3,
+                                health: -8,
+                                weaknessDescription: 'You thrust the sword aiming for his stomach, he deftly steps aside and comes at you from the side. He snaps you neck in half',
+                            }, {
+                                key: 'sword',
+                                isWeakness: false,
+                                weaknessDescription: 'You thrust the sword into his heart, He laughs mocking you, takes the sword and stabs you back',
+                                health: -9,
+                            }, {
+                                key: 'cross',
+                                description: 'You take out the cross and show it in the direction of the monster, he cowers in terror of the holy object',
+                                weaknessDescription: 'You try to make him stay using the cross, but he seems unperterbed by it now, he comes at you full tilt and pummels you till you collapse',
+                                health: -8,
+                                noremove: false,
+                                attack: -1
+                            }],
+                        loss: {
+                            description: 'You walk up to the vampire, hoping to intimidate him to death, but it does not work, he takes a bite out of you instead.',
+                            health: -8
+                        },
+                        loot: [{
+                                description: 'You defeat the vampire disintegrating him into dust, the trophy he was holding in his coat falls to the floor',
+                                to: 'room',
+                                interactible: ['trophy']
+                            }]
+                    }
+                },
+                trophy: {
+                    shortDescription: 'trophy',
+                    description: 'A shining golden trophy that would go well on a mantle or trophy stand',
+                    take: {
+                        able: true,
+                        description: 'You take the trophy, to return it to its rightful place'
                     }
                 },
                 spider: {
@@ -518,10 +638,11 @@ var constants = {
                         description: 'You rotate the door till you find a keyhole and insert the key into it. A single coin slot appears. You insert your coin into the slot. The door dissolves into a green puddle',
                         needs: [{
                                 key: 'emeraldKey',
-                                description: 'You rotate the door and see a keyhole, you rotate the door somemore hoping to see a hinge that you could lever around. You find nothing',
+                                description: 'You rotate the door and see a keyhole, you rotate the door some more hoping to see a hinge that you could lever around. You find nothing',
                             }, {
                                 key: 'goldCoin',
-                                description: 'You rotate the door to find a keyhole and insert the key into it. A single slot appears, You dont have anything to put in it',
+                                description: 'You rotate the door to find a keyhole and insert the key into it. A single slot appears, You dont have anything to put in it. The door rotates back to its previous state, but your foot gets jammed in the way',
+                                health: -1
                             }]
                     }
                 },
@@ -596,6 +717,7 @@ var constants = {
                 stake: {
                     shortDescription: 'wooden stake',
                     description: 'A stake made by sharpening wood into a point, could be useful as a weapon',
+                    alternatives: ['wood stake', 'stake'],
                     take: {
                         able: true,
                     },
@@ -631,7 +753,6 @@ var constants = {
                         description: 'You cut the snakeskin into narrow strips and weave it into a rope',
                         able: true,
                         needs: [{
-                                // TODO define snakeskin
                                 key: 'snakeSkin',
                                 description: 'You dont have anything that could be fashioned into a rope',
                             }, {
@@ -640,16 +761,52 @@ var constants = {
                             }]
                     }
                 },
+                ladder: {
+                    shortDescription: 'rope ladder',
+                    description: 'A makeshift ladder made using wood pieces tied together with rope',
+                    alternatives: ['stairs', 'stair'],
+                    take: {
+                        able: true
+                    },
+                    make: {
+                        description: 'You use the wood pieces and the rope to assemble a makeshift rope ladder',
+                        able: true,
+                        needs: [{
+                                key: 'wood',
+                                description: 'You need something to make the ladder out of.'
+                            }, {
+                                key: 'rope',
+                                description: 'You need something to tie the wood pieces to make a rope ladder'
+                            }]
+                    },
+                    put: {
+                        able: true,
+                        candidates: [{
+                                key: 'greenDoor'
+                            }, {
+                                key: 'juttingRock',
+                                description: 'You tie the rope ladder on the jutting rock and drop it down into the hole',
+                                exit: {
+                                    room: 'darkCave',
+                                    direction: 'up'
+                                }
+                            }]
+                    }
+                },
                 snake: {
                     shortDescription: 'snake',
-                    description: 'A snake poised to strike, with a low threatening hiss, it warns you of coming closer',
+                    description: 'A snake poised to strike, with a low threatening hiss, it warns you of coming closer. It looks like it has had a recent meal.',
                     take: {
                         description: 'You try to grab the tail of the snake, but it slithers away and strikes you instead',
-                        health: -4,
+                        loss: {
+                            health: -4,
+                        }
                     },
                     open: {
                         description: 'You try to open the snake with your hands, but the snake, wary, slithers out of your hands and bites your leg.',
-                        health: -3
+                        loss: {
+                            health: -3
+                        }
                     },
                     kill: {
                         able: true,
@@ -673,13 +830,50 @@ var constants = {
                         loss: {
                             description: 'You try to wrestle the snake into submission, but it fails miserably and you get bitten',
                             health: -4
+                        },
+                        loot: [{
+                                interactible: ['snakeCarcass']
+                            }]
+                    }
+                },
+                snakeCarcass: {
+                    shortDescription: 'snake carcass',
+                    description: 'carcass of the snake you killed. Reminder of the battle you waged.',
+                    take: {
+                        description: 'You try to take the snake carcass, but you were careless. The fang of the snake carcass strikes on your arm.',
+                        loss: {
+                            health: -4,
+                        }
+                    },
+                    open: {
+                        description: 'You cut open the snake lengthwise, skin it, and cut it open in th middle.',
+                        content: [{
+                                description: 'You find a glowing emerald key in its belly.',
+                                interactible: ['emeraldKey']
+                            }, {
+                                Interactible: ['snakeSkin'],
+                                to: 'room'
+                            }]
+                    }
+                },
+                snakeSkin: {
+                    shortDescription: 'snake skin',
+                    description: 'The skin of the snake you defeated, thrown away after investigating its insides',
+                    take: {
+                        able: true
+                    },
+                    open: {
+                        description: 'You cut up the snake skin trying to open it further, you find nothing',
+                        loss: {
+                            to: 'room',
+                            key: 'snakeSkin'
                         }
                     }
                 },
                 cross: {
                     shortDescription: 'wooden cross',
                     description: 'A cross made from wood, maybe it could be used as a religious artifact',
-                    alternatives: ['woodcross', 'wood cross', 'woodencross'],
+                    alternatives: ['holy cross', 'woodcross', 'wood cross', 'wooden cross'],
                     take: {
                         able: true,
                     },
@@ -703,7 +897,7 @@ var constants = {
                 holyWater: {
                     shortDescription: 'holy water',
                     description: 'Holy water, glowing lightly, its power is palpable ',
-                    alternatives: ['holywater'],
+                    alternatives: ['holywater', 'holy'],
                     open: {
                         description: 'Seriously? You\'re trying to open water, did you stop to maybe think about it?'
                     },
@@ -1635,6 +1829,9 @@ var Candidate = (function (_super) {
     Candidate.prototype.giveReward = function () {
         if (this.attack && this.key)
             player.kill(this.key);
+        else if (this.exit) {
+            this.exit.unhide();
+        }
         else
             _super.prototype.giveReward.call(this);
     };
