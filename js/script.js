@@ -96,9 +96,23 @@ var constants = {
                             description: 'You expect the door to be a mirage and resolve to walk through it, you walk headlong into the door and hit your face hard.'
                         }, {
                             direction: 'west',
-                            to: 'treasureRoom',
+                            to: 'cell',
                             locked: 'wroughtIronDoor',
-                            description: 'You expect the door to be a mirage and resolve to walk through it, you walk headlong into the door and hit your face hard.'
+                            description: 'You shake the grills hoping to break it down, but it doesnt budge.'
+                        }]
+                },
+                cell: {
+                    shortDescription: 'cell block',
+                    description: 'A damp cell block, with iron grills and a tiny window, It gives you the impression of extreme loneliness. A faint smell of garlics hang in the air',
+                    examineReward: {
+                        description: 'You follow your nose to find the source of the smell, and on the windowsill you find moss growing. The smell is coming from the moss',
+                        to: 'room',
+                        interactible: ['garlicMoss']
+                    },
+                    interactible: ['snake'],
+                    exists: [{
+                            direction: 'east',
+                            to: 'northRoom'
                         }]
                 },
                 southRoom: {
@@ -126,7 +140,7 @@ var constants = {
                 burningRoom: {
                     shortDescription: 'burning room',
                     description: 'You are in a room with granite slabs for floors and ceiling, the room is really hot, you can barely stand on the floor',
-                    interactible: ['fire', 'woodenClub'],
+                    interactible: ['fire', 'metalClub'],
                     exits: [{
                             direction: 'east',
                             to: 'southRoom'
@@ -275,10 +289,10 @@ var constants = {
                         }
                     },
                     open: {
-                        description: 'You smash the box with the wooden club',
+                        description: 'You smash the box with the club.',
                         able: true,
                         needs: [{
-                                key: 'woodenClub',
+                                key: 'metalClub',
                                 noremove: true,
                                 description: 'You try to pry open the box, a rotting splinter pierces your hand',
                                 health: -1
@@ -314,12 +328,12 @@ var constants = {
                         description: 'You take the normal key hoping that it has a use in the future',
                     }
                 },
-                woodenClub: {
-                    shortDescription: 'wooden club',
-                    description: 'A club made of wood. It does not look very strong, could be used to break something.',
+                metalClub: {
+                    shortDescription: 'metal club',
+                    description: 'A club made of metal. It does not look very strong, could be used to break something.',
                     take: {
                         able: true,
-                        description: 'You pick up the wooden club and keep it with you.',
+                        description: 'You pick up the metal club and keep it with you.',
                     }
                 },
                 scorpion: {
@@ -373,11 +387,13 @@ var constants = {
                                 key: 'sword',
                                 isWeakness: false,
                                 health: -3,
+                                attack: -1,
+                                description: 'The spider jumps at you, and with a thrust you insert the sword into its belly, It wriggles in pain and thrashes away.',
                                 weaknessDescription: 'You swipe at the spider with your sword, but it quickly jumps away, and catches you in its webbing. You cut through the webbing and get away, but not before getting bitten',
                             }, {
-                                key: 'woodenClub',
+                                key: 'metalClub',
                                 isWeakness: true,
-                                description: 'The spider approaches you, but you were ready with the wooden club, You smack it right on its head mid jump. It gets knocked back. Dazed.',
+                                description: 'The spider approaches you, but you were ready with the club, You smack it right on its head mid jump. It gets knocked back. Dazed.',
                                 health: -3,
                                 attack: -1,
                                 weaknessDescription: 'The spider approaches you again, You swing at it with the club, but the spider anticipated the attack and evades it. It crushes you with its legs.'
@@ -394,7 +410,8 @@ var constants = {
                                 interactible: ['ironKey']
                             }],
                         loss: [{
-                                description: 'The spider shoots its web at you and you\'re too slow to avoid it. You wriggle free, but get bitten.'
+                                description: 'The spider shoots its web at you and you\'re too slow to avoid it. You wriggle free, but get bitten.',
+                                health: -3
                             }]
                     }
                 },
@@ -410,6 +427,14 @@ var constants = {
                     open: {
                         able: true,
                         description: 'You take your sword and cut open the carcass of the scorpion hoping for some answers to its ferocity, you find none'
+                    }
+                },
+                garlicMoss: {
+                    shortDescription: 'garlic smelling moss',
+                    description: 'A moss you found in cell block, that smells of garlic.',
+                    take: {
+                        able: true,
+                        description: 'You take the garlic moss, hoping to use it later'
                     }
                 },
                 sword: {
@@ -473,8 +498,8 @@ var constants = {
                     }
                 },
                 wroughtIronDoor: {
-                    shortDescription: 'wrought iron door',
-                    description: 'An iron door, completely inpenetrable.',
+                    shortDescription: 'iron grills',
+                    description: 'Iron grills like that found outside cell blocks, completely impenetrable.',
                     open: {
                         able: true,
                         description: 'You try to insert the key, but the keyhole is a fake one. You look around and find a suspicious hole, you try the key in it, and it twists open.',
@@ -563,7 +588,7 @@ var constants = {
                     shortDescription: 'wood piece',
                     description: 'A very dry piece of wood',
                     take: {
-                        description: 'You take the wood piece hoping it will be useful later',
+                        description: 'You take some of the wood hoping it will be useful later',
                         able: true,
                         amount: 4,
                     }
@@ -615,6 +640,42 @@ var constants = {
                             }]
                     }
                 },
+                snake: {
+                    shortDescription: 'snake',
+                    description: 'A snake poised to strike, with a low threatening hiss, it warns you of coming closer',
+                    take: {
+                        description: 'You try to grab the tail of the snake, but it slithers away and strikes you instead',
+                        health: -4,
+                    },
+                    open: {
+                        description: 'You try to open the snake with your hands, but the snake, wary, slithers out of your hands and bites your leg.',
+                        health: -3
+                    },
+                    kill: {
+                        able: true,
+                        health: 4,
+                        removeWeakness: true,
+                        weakness: [{
+                                key: 'sword',
+                                description: 'The snake slithers towards you, You cut at its head with your sword. Bleeding profusely, it retreats.',
+                                attack: -2,
+                                health: -4,
+                                isWeakness: true,
+                                weaknessDescription: 'You try to swing the sword at it again, but it suddenly lies flat on the ground, making you miss. It proceeds to bite you on the ankle.',
+                            }, {
+                                key: 'metalClub',
+                                description: 'The snake raises its head to strike, you whack it upside the head with the club, leaving it disoriented. One more whack to the head finishes the job',
+                                attack: -2,
+                                health: -4,
+                                isWeakness: true,
+                                weaknessDescription: 'You swing the club like a bat aiming for its head, but it ducks, and strikes you on your arm.',
+                            }],
+                        loss: {
+                            description: 'You try to wrestle the snake into submission, but it fails miserably and you get bitten',
+                            health: -4
+                        }
+                    }
+                },
                 cross: {
                     shortDescription: 'wooden cross',
                     description: 'A cross made from wood, maybe it could be used as a religious artifact',
@@ -663,11 +724,18 @@ var constants = {
                     put: {
                         description: 'You pour the holy water out',
                         dissipate: true,
+                        candidates: [{
+                                key: 'fire',
+                                attack: true,
+                            }, {
+                                key: 'redGlowingBox',
+                                attack: true
+                            }]
                     }
                 },
                 trophyStand: {
                     shortDescription: 'trophy stand',
-                    description: 'An impossing trophy stand, there seems to be no trophy on it.',
+                    description: 'An imposing trophy stand, there seems to be no trophy on it.',
                     take: {
                         description: 'It is part of the room.'
                     },
@@ -763,7 +831,7 @@ var constants = {
                         needs: [{
                                 key: 'holyWater',
                                 description: 'You take some coins in you hand, You suddenly feel weak. The coins were cursed.',
-                                health: -4
+                                health: -6
                             }],
                     }
                 },
@@ -1620,6 +1688,7 @@ var Interactible = (function (_super) {
         var _this = _super.call(this) || this;
         _this.shortDescription = _this.name;
         _this.description = _this.shortDescription;
+        _this.examineReward = new Reward({});
         return _this;
     }
     Interactible.reset = function () {
@@ -1635,6 +1704,8 @@ var Interactible = (function (_super) {
                 insertInter.description = inter.description;
             if (inter.alternatives)
                 insertInter.alternatives = inter.alternatives;
+            if (inter.examineReward)
+                insertInter.examineReward = new Reward(inter.examineReward);
             insertInter.take = new Take(inter.take, inter.shortDescription);
             insertInter.open = new Open(inter.open, inter.shortDescription);
             insertInter.kill = new Kill(inter.kill, inter.shortDescription);
@@ -1657,6 +1728,10 @@ var Interactible = (function (_super) {
     };
     Interactible.prototype.putable = function () {
         return this.put && this.put.able;
+    };
+    Interactible.prototype.giveExamineReward = function () {
+        if (this.examineReward)
+            this.examineReward.giveReward();
     };
     Interactible.prototype.is = function (identifier) {
         return this.name == identifier || has(this.shortDescription, identifier);
@@ -1742,17 +1817,46 @@ var Character = (function (_super) {
     Character.prototype.examine = function (identifier) {
         var inRoom = Room.currentRoom().has(identifier);
         var withPlayer = player.has(identifier);
-        if (inRoom)
-            Game.print(Interactible.findOne(inRoom).description);
-        else if (withPlayer)
-            Game.print(Interactible.findOne(withPlayer).description);
-        else
-            Game.print("No " + identifier + " found");
+        var interactible;
+        if (inRoom) {
+            interactible = Interactible.findOne(inRoom);
+            Game.print(interactible.description);
+            interactible.giveExamineReward();
+            return;
+        }
+        else if (withPlayer) {
+            interactible = Interactible.findOne(withPlayer);
+            Game.print(interactible.description);
+            interactible.giveExamineReward();
+            return;
+        }
+        else {
+            var room;
+            if (identifier == 'room') {
+                room = Room.currentRoom();
+            }
+            else {
+                room = Room.findOne(identifier);
+            }
+            if (room) {
+                Game.print(room.shortDescription);
+                Game.print(room.description);
+                room.giveExamineReward();
+            }
+            else {
+                Game.print("No " + identifier + " found");
+            }
+        }
     };
     Character.prototype.addToInventory = function (identifier) {
         var item = Interactible.findOne(identifier);
-        player.inventory.push(identifier);
-        Game.print(item.shortDescription + " added to inventory.");
+        if (!player.has(identifier)) {
+            player.inventory.push(identifier);
+            Game.print(item.shortDescription + " added to inventory.");
+        }
+        else {
+            Game.print("You already have " + identifier);
+        }
     };
     // Try to take the object
     Character.prototype.take = function (identifier) {
@@ -1921,7 +2025,7 @@ var Character = (function (_super) {
         this.inventory = [];
         this.health = constants.maxHP;
         if (constants.debug) {
-            // this.inventory = ['woodenClub'];
+            // this.inventory = ['metalClub'];
             // this.location = 'treasureRoom';
         }
     };
@@ -1986,6 +2090,8 @@ var Room = (function (_super) {
         _this.interactible = [];
         _this.shortDescription = 'a room';
         _this.description = 'You\'re in a room';
+        _this.examineReward = new Reward({});
+        ;
         return _this;
     }
     Room.currentRoom = function () {
@@ -2008,7 +2114,7 @@ var Room = (function (_super) {
         }
     };
     Room.prototype.add = function (item) {
-        if (Interactible.findOne(item))
+        if (Interactible.findOne(item) && !this.has(item))
             this.interactible.push(item);
     };
     Room.findOne = function (roomName) {
@@ -2021,6 +2127,10 @@ var Room = (function (_super) {
             }
         }
         return null;
+    };
+    Room.prototype.giveExamineReward = function () {
+        if (this.examineReward)
+            this.examineReward.giveReward();
     };
     Room.prototype.findDoorExit = function (identifier) {
         for (var _i = 0, _a = this.exits; _i < _a.length; _i++) {
@@ -2101,6 +2211,8 @@ var Room = (function (_super) {
                 room.description = thisRoom.description;
             if (thisRoom.interactible)
                 room.interactible = thisRoom.interactible;
+            if (thisRoom.examineReward)
+                room.examineReward = new Reward(thisRoom.examineReward);
             if (thisRoom.exits)
                 for (var _i = 0, _a = thisRoom.exits; _i < _a.length; _i++) {
                     var exitObject = _a[_i];
