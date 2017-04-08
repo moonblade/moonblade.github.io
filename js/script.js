@@ -832,7 +832,8 @@ var constants = {
                             health: -4
                         },
                         loot: [{
-                                interactible: ['snakeCarcass']
+                                interactible: ['snakeCarcass'],
+                                to: 'room'
                             }]
                     }
                 },
@@ -847,11 +848,16 @@ var constants = {
                     },
                     open: {
                         description: 'You cut open the snake lengthwise, skin it, and cut it open in th middle.',
+                        able: true,
+                        needs: [{
+                                key: 'sword',
+                                description: 'You need something to cut open the carcass'
+                            }],
                         content: [{
                                 description: 'You find a glowing emerald key in its belly.',
                                 interactible: ['emeraldKey']
                             }, {
-                                Interactible: ['snakeSkin'],
+                                interactible: ['snakeSkin'],
                                 to: 'room'
                             }]
                     }
