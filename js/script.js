@@ -1221,6 +1221,7 @@ var Command = (function () {
     function Command(str) {
         if (!str)
             var str = document.getElementById('command').value;
+        str = str.toLowerCase();
         // splits string into an array of words, taking out all whitespace
         var parts = str.split(/\s+/);
         // command is the first word in the array, which is removed from the array
