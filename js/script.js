@@ -19,6 +19,7 @@ var constants = {
     easterEgg: ['go up', 'go up', 'go down', 'go down', 'left ', 'right ', 'left ', 'right ', 'b ', 'a '],
     seperator: '..',
     maxHP: 10,
+    gameEnd: 'You have completed the game',
     games: [{
             startLocation: 'westRoom',
             // NAME OF GAME
@@ -110,7 +111,7 @@ var constants = {
                         interactible: ['garlicMoss']
                     },
                     interactible: ['snake'],
-                    exists: [{
+                    exits: [{
                             direction: 'east',
                             to: 'northRoom'
                         }]
@@ -299,7 +300,7 @@ var constants = {
                         }
                     },
                     open: {
-                        description: 'You smash the box with the club.',
+                        description: 'You smash the box with the club. Whatever was inside has long since lost to decay.',
                         able: true,
                         needs: [{
                                 key: 'metalClub',
@@ -488,6 +489,14 @@ var constants = {
                     take: {
                         able: true,
                         description: 'You take the trophy, to return it to its rightful place'
+                    },
+                    put: {
+                        able: true,
+                        candidates: [{
+                                key: 'trophyStand',
+                                description: 'You place the trophy on the trophy stand, a fanfare of trumpets sound off in the distance, signalling the end of your adventure',
+                                gameEnd: true,
+                            }]
                     }
                 },
                 spider: {
@@ -715,9 +724,8 @@ var constants = {
                     }
                 },
                 stake: {
-                    shortDescription: 'wooden stake',
+                    shortDescription: 'stake',
                     description: 'A stake made by sharpening wood into a point, could be useful as a weapon',
-                    alternatives: ['wood stake', 'stake'],
                     take: {
                         able: true,
                     },
@@ -750,7 +758,7 @@ var constants = {
                         able: true,
                     },
                     make: {
-                        description: 'You cut the snakeskin into narrow strips and weave it into a rope',
+                        description: 'You cut the snakeskin into narrow strips and braid it into a rope',
                         able: true,
                         needs: [{
                                 key: 'snakeSkin',
@@ -782,12 +790,10 @@ var constants = {
                     put: {
                         able: true,
                         candidates: [{
-                                key: 'greenDoor'
-                            }, {
                                 key: 'juttingRock',
                                 description: 'You tie the rope ladder on the jutting rock and drop it down into the hole',
                                 exit: {
-                                    room: 'darkCave',
+                                    room: 'undergroundPool',
                                     direction: 'up'
                                 }
                             }]
@@ -877,9 +883,9 @@ var constants = {
                     }
                 },
                 cross: {
-                    shortDescription: 'wooden cross',
+                    shortDescription: 'cross',
                     description: 'A cross made from wood, maybe it could be used as a religious artifact',
-                    alternatives: ['holy cross', 'woodcross', 'wood cross', 'wooden cross'],
+                    alternatives: ['holy cross'],
                     take: {
                         able: true,
                     },
@@ -918,6 +924,7 @@ var constants = {
                                 description: 'You try to make holy water, but there is not enough holyness to imbue into the water',
                             }, {
                                 key: 'cross',
+                                noremove: true,
                                 description: 'You try to make holy water, but you dont have anything to direct the holyness of the room to the water',
                             }]
                     },
@@ -1057,6 +1064,9 @@ var constants = {
                                 description: 'Inside the box you find an ornately carved ivory key',
                                 interactible: ['ivoryKey']
                             }]
+                    },
+                    put: {
+                        description: 'You place the box carefully on the ground'
                     }
                 },
             }
@@ -1101,6 +1111,11 @@ var Game = (function () {
         // TODO remove this hack, use jQuery and do it properly
         Game.savedGame[command.object] = JSON.parse(JSON.stringify(Game.commandHistory));
         Game.print("Game saved");
+    };
+    Game.gameEnd = function () {
+        Game.reset();
+        Game.clear();
+        alert(constants.gameEnd);
     };
     Game.load = function (command) {
         if (command.object in Game.savedGame) {
@@ -1720,6 +1735,7 @@ var Put = (function (_super) {
             debug(candidate);
             if (candidate.satisfied()) {
                 candidate.giveReward();
+                player.removeFromInventory(withPlayer);
                 return;
             }
         }
@@ -1754,6 +1770,8 @@ var Reward = (function () {
                 this.execute = rewardObject.execute;
             if (rewardObject.health)
                 this.health = rewardObject.health;
+            if (rewardObject.gameEnd)
+                this.gameEnd = rewardObject.gameEnd;
         }
     }
     Reward.prototype.remove = function () {
@@ -1790,6 +1808,8 @@ var Reward = (function () {
                     break;
             }
         }
+        if (this.gameEnd)
+            Game.gameEnd();
         if (this.execute)
             this.execute();
         player.updateHealth(this.health);
@@ -1834,10 +1854,12 @@ var Candidate = (function (_super) {
         return _this;
     }
     Candidate.prototype.giveReward = function () {
-        if (this.attack && this.key)
+        if (this.attack && this.key) {
             player.kill(this.key);
+        }
         else if (this.exit) {
             this.exit.unhide();
+            Game.print(this.description);
         }
         else
             _super.prototype.giveReward.call(this);
