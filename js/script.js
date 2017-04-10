@@ -765,6 +765,7 @@ var constants = {
                                 description: 'You dont have anything that could be fashioned into a rope',
                             }, {
                                 key: 'sword',
+                                noremove: true,
                                 description: 'You need something to cut the snake skin with to make it into a rope'
                             }]
                     }
@@ -857,7 +858,6 @@ var constants = {
                         able: true,
                         needs: [{
                                 key: 'sword',
-                                noremove: true,
                                 description: 'You need something to cut open the carcass'
                             }],
                         content: [{
@@ -923,6 +923,7 @@ var constants = {
                             }, {
                                 room: 'eastRoom',
                                 description: 'You try to make holy water, but there is not enough holyness to imbue into the water',
+                                noremove: true
                             }, {
                                 key: 'cross',
                                 noremove: true,
