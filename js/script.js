@@ -857,6 +857,7 @@ var constants = {
                         able: true,
                         needs: [{
                                 key: 'sword',
+                                noremove: true,
                                 description: 'You need something to cut open the carcass'
                             }],
                         content: [{
