@@ -1,4 +1,7 @@
-Walkthrough zorkish
+> To play visit [zorkish](https://moonblade.github.io/textAdventure/)
+
+
+### Walkthrough zorkish
 
 * in west room, take platinum key
 * go east to center room and take copper key
